@@ -336,8 +336,29 @@ export default function App() {
     }
   };
 
+  const generateAutoCustomId = (systemName: string | undefined): string => {
+    const systemPrefix = systemName || 'GEN';
+    const pattern = new RegExp(`^${systemPrefix}-(\\d{4})$`);
+    let maxSeq = 0;
+    entries.forEach((e) => {
+      const match = (e.custom_id || '').match(pattern);
+      if (match) {
+        const seq = parseInt(match[1], 10);
+        if (seq > maxSeq) maxSeq = seq;
+      }
+    });
+    const nextSeq = maxSeq + 1;
+    return `${systemPrefix}-${String(nextSeq).padStart(4, '0')}`;
+  };
+
   const handleAddEntry = async (newFields: Omit<BOMEntry, 'id' | 'delete'>) => {
     const uniqueId = `entry-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    let customId = newFields.custom_id;
+    if (!customId || customId.trim() === '') {
+      customId = generateAutoCustomId(newFields.system);
+    }
+
     const newEntry: BOMEntry = {
       id: uniqueId,
       delete: '0',
@@ -345,6 +366,7 @@ export default function App() {
       createdBy_email: user?.email || 'guest@fs-team.com',
       createdAt: new Date().toISOString(),
       ...newFields,
+      custom_id: customId,
     } as BOMEntry;
 
     if (isFirebaseConfigured) {
@@ -355,9 +377,15 @@ export default function App() {
   };
 
   const handleUpdateEntry = async (updatedEntry: BOMEntry) => {
+    let customId = updatedEntry.custom_id;
+    if (!customId || customId.trim() === '') {
+      customId = generateAutoCustomId(updatedEntry.system);
+    }
+
     // Keep original created tags, update editor tags if needed
     const entryToSave = {
       ...updatedEntry,
+      custom_id: customId,
       createdBy_name: updatedEntry.createdBy_name || user?.displayName || 'Guest User',
       createdBy_email: updatedEntry.createdBy_email || user?.email || 'guest@fs-team.com',
     };
