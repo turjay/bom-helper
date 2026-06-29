@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, Check, RotateCcw, AlertCircle } from 'lucide-react';
-import { BOMEntry, AssemblyRow } from '../types';
+import { BOMEntry, AssemblyRow, ColumnMapping } from '../types';
 import { OFFICIAL_SYSTEMS, OFFICIAL_ASSEMBLIES } from '../fixtures/assemblyCatalog';
 
 interface BOMFormProps {
@@ -13,6 +13,7 @@ interface BOMFormProps {
   existingEntries: BOMEntry[];
   assemblies: AssemblyRow[];
   hasMapping: boolean;
+  columnMapping: ColumnMapping | null;
 }
 
 export const BOMForm: React.FC<BOMFormProps> = ({
@@ -23,6 +24,7 @@ export const BOMForm: React.FC<BOMFormProps> = ({
   existingEntries,
   assemblies,
   hasMapping,
+  columnMapping,
 }) => {
   // Form Fields State
   const [system, setSystem] = useState<string>('');
@@ -56,7 +58,24 @@ export const BOMForm: React.FC<BOMFormProps> = ({
           k !== 'quantity' &&
           k !== 'comments' &&
           k !== 'custom_id' &&
-          k !== 'delete'
+          k !== 'delete' &&
+          (!columnMapping || (
+            k !== columnMapping.parts.name &&
+            k !== columnMapping.subparts.name &&
+            k !== columnMapping.parts.makeBuy &&
+            k !== columnMapping.subparts.makeBuy &&
+            k !== columnMapping.parts.quantity &&
+            k !== columnMapping.subparts.quantity &&
+            k !== columnMapping.parts.comments &&
+            k !== columnMapping.subparts.comments &&
+            k !== columnMapping.parts.customId &&
+            k !== columnMapping.parts.partNo &&
+            k !== columnMapping.subparts.partNo &&
+            k !== columnMapping.parts.uid &&
+            k !== columnMapping.subparts.uid &&
+            k !== columnMapping.parts.assemblyUid &&
+            k !== columnMapping.subparts.partUid
+          ))
         ) {
           keys.add(k);
         }
@@ -193,6 +212,7 @@ export const BOMForm: React.FC<BOMFormProps> = ({
   };
 
   const isImported = !!(editingEntry && (editingEntry._part_uid || editingEntry._subpart_uid));
+  const currentSubAssembly = subAssemblyMode === 'select' ? subAssemblySelect : subAssemblyText.trim() || 'none';
 
   return (
     <form onSubmit={handleSubmit} className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -319,33 +339,35 @@ export const BOMForm: React.FC<BOMFormProps> = ({
 
       <div className="form-grid">
         {/* Make / Buy */}
-        <div className="form-group">
-          <label className="form-label">Make / Buy *</label>
-          <div className="radio-group">
-            <label className="radio-label">
-              <input
-                type="radio"
-                className="radio-input"
-                name="make_buy"
-                value="make"
-                checked={makeBuy === 'make'}
-                onChange={() => setMakeBuy('make')}
-              />
-              <span>make</span>
-            </label>
-            <label className="radio-label">
-              <input
-                type="radio"
-                className="radio-input"
-                name="make_buy"
-                value="buy"
-                checked={makeBuy === 'buy'}
-                onChange={() => setMakeBuy('buy')}
-              />
-              <span>buy</span>
-            </label>
+        {currentSubAssembly === 'none' && (
+          <div className="form-group">
+            <label className="form-label">Make / Buy *</label>
+            <div className="radio-group">
+              <label className="radio-label">
+                <input
+                  type="radio"
+                  className="radio-input"
+                  name="make_buy"
+                  value="make"
+                  checked={makeBuy === 'make'}
+                  onChange={() => setMakeBuy('make')}
+                />
+                <span>make</span>
+              </label>
+              <label className="radio-label">
+                <input
+                  type="radio"
+                  className="radio-input"
+                  name="make_buy"
+                  value="buy"
+                  checked={makeBuy === 'buy'}
+                  onChange={() => setMakeBuy('buy')}
+                />
+                <span>buy</span>
+              </label>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Quantity */}
         <div className="form-group">

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PlayCircle, CheckCircle2, XCircle, Terminal } from 'lucide-react';
 import { AssemblyRow, BOMEntry, ColumnMapping } from '../types';
-import { parseCSV, generateCSV, exportEntriesToCSV } from '../utils/csvParser';
+import { parseCSV, generateCSV, exportEntriesToCSV, detectColumnMapping } from '../utils/csvParser';
 import { validateBOM } from '../utils/validator';
 
 interface TestResult {
@@ -310,6 +310,102 @@ export const TestDashboard: React.FC = () => {
       });
     }
 
+    // 7. Test: New Part and Subpart Co-existence
+    try {
+      const entries: BOMEntry[] = [
+        {
+          id: 'local-parent-1',
+          system: 'BR',
+          assembly: 'Brake Discs',
+          subAssembly: 'none',
+          part: 'Custom Disk Assembly Container',
+          make_buy: 'make',
+          quantity: '1',
+          comments: 'Brand new parent part',
+          custom_id: '',
+          delete: '0',
+        },
+        {
+          id: 'local-sub-1',
+          system: 'BR',
+          assembly: 'Brake Discs',
+          subAssembly: 'Custom Disk Assembly Container',
+          part: 'Rotor Hub Plate',
+          make_buy: 'make',
+          quantity: '1',
+          comments: 'Inner rotor subpart under brand new parent',
+          custom_id: '',
+          delete: '0',
+        },
+      ];
+
+      const { parts, subparts } = exportEntriesToCSV(entries, assemblies, mapping, partsHeaders, subpartsHeaders);
+
+      // Verify that there is exactly ONE part named 'Custom Disk Assembly Container' in parts.csv
+      const containerParts = parts.filter((p) => p[mapping.parts.name] === 'Custom Disk Assembly Container');
+      if (containerParts.length !== 1) {
+        throw new Error(`Expected exactly 1 exported Part for "Custom Disk Assembly Container", but got ${containerParts.length} (indicates duplicate creation bug)`);
+      }
+
+      const parentUid = containerParts[0][mapping.parts.uid];
+      if (!parentUid.startsWith('NEW-')) {
+        throw new Error(`Expected new parent Part to get a temporary ID starting with "NEW-", but got "${parentUid}"`);
+      }
+
+      // Verify that the subpart correctly references the generated temp ID
+      if (subparts.length !== 1) {
+        throw new Error(`Expected exactly 1 exported subpart, but got ${subparts.length}`);
+      }
+
+      const subpartParentUid = subparts[0][mapping.subparts.partUid];
+      if (subpartParentUid !== parentUid) {
+        throw new Error(`Expected subpart parent link "${subpartParentUid}" to match parent Part ID "${parentUid}"`);
+      }
+
+      results.push({
+        name: 'New Part and Subpart Co-existence',
+        desc: 'Verifies that exporting both a new parent Part and a new Subpart under it results in a single parent Part in parts.csv with a temporary ID, and the Subpart correctly references it.',
+        passed: true,
+      });
+    } catch (e: any) {
+      results.push({
+        name: 'New Part and Subpart Co-existence',
+        desc: 'Verifies that exporting both a new parent Part and a new Subpart under it results in a single parent Part in parts.csv with a temporary ID, and the Subpart correctly references it.',
+        passed: false,
+        errorLog: e.message || String(e),
+      });
+    }
+    // 8. Test: Column Mapping Detection for FSG 2026 Headers
+    try {
+      const assembliesHeaders = ['assembly_uid', 'system', 'assembly', 'sub_assembly', 'assembly_no', 'comments'];
+      const partsHeaders = ['part_uid', 'assembly_uid', 'system', 'assembly', 'sub_assembly', 'part_no', 'part', 'part_no_custom', 'makebuy', 'quantity', 'comments', 'delete'];
+      const subpartsHeaders = ['subpart_uid', 'part_uid', 'part_no', 'type', 'subtype', 'quantity', 'costs', 'comments', 'comments_costs', 'emissions', 'comments_emissions', 'sorting', 'delete'];
+
+      const detected = detectColumnMapping(assembliesHeaders, partsHeaders, subpartsHeaders);
+
+      if (detected.parts.makeBuy !== 'makebuy') {
+        throw new Error(`Expected parts makeBuy column to match "makebuy", but got "${detected.parts.makeBuy}"`);
+      }
+      if (detected.parts.customId !== 'part_no_custom') {
+        throw new Error(`Expected parts customId column to match "part_no_custom", but got "${detected.parts.customId}"`);
+      }
+      if (detected.subparts.name !== 'subtype') {
+        throw new Error(`Expected subparts name column to match "subtype", but got "${detected.subparts.name}"`);
+      }
+
+      results.push({
+        name: 'Column Mapping Detection for FSG 2026 Headers',
+        desc: 'Verifies that makebuy, part_no_custom, and subtype column mappings are correctly resolved for the official FSG 2026 CCBOM file headers.',
+        passed: true,
+      });
+    } catch (e: any) {
+      results.push({
+        name: 'Column Mapping Detection for FSG 2026 Headers',
+        desc: 'Verifies that makebuy, part_no_custom, and subtype column mappings are correctly resolved for the official FSG 2026 CCBOM file headers.',
+        passed: false,
+        errorLog: e.message || String(e),
+      });
+    }
     setTests(results);
     setIsRunning(false);
   };

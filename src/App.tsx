@@ -562,7 +562,24 @@ export default function App() {
           k !== 'delete' &&
           k !== 'createdBy_name' &&
           k !== 'createdBy_email' &&
-          k !== 'createdAt'
+          k !== 'createdAt' &&
+          (!columnMapping || (
+            k !== columnMapping.parts.name &&
+            k !== columnMapping.subparts.name &&
+            k !== columnMapping.parts.makeBuy &&
+            k !== columnMapping.subparts.makeBuy &&
+            k !== columnMapping.parts.quantity &&
+            k !== columnMapping.subparts.quantity &&
+            k !== columnMapping.parts.comments &&
+            k !== columnMapping.subparts.comments &&
+            k !== columnMapping.parts.customId &&
+            k !== columnMapping.parts.partNo &&
+            k !== columnMapping.subparts.partNo &&
+            k !== columnMapping.parts.uid &&
+            k !== columnMapping.subparts.uid &&
+            k !== columnMapping.parts.assemblyUid &&
+            k !== columnMapping.subparts.partUid
+          ))
         ) {
           keys.add(k);
         }
@@ -639,6 +656,7 @@ export default function App() {
             existingEntries={entries}
             assemblies={assemblies}
             hasMapping={!!columnMapping}
+            columnMapping={columnMapping}
           />
 
           {/* Navigation Tabs */}

@@ -26,18 +26,18 @@ export function detectColumnMapping(
       assemblyUid: findHeader(partsHeaders, [/assembly_uid/i], 'assembly_uid'),
       partNo: findHeader(partsHeaders, [/part_no/i, /part_number/i], 'part_no'),
       name: findHeader(partsHeaders, [/^part$/i, /part_name/i, /^name$/i], 'part'),
-      makeBuy: findHeader(partsHeaders, [/make_buy/i, /make\/buy/i, /make_or_buy/i], 'make_buy'),
+      makeBuy: findHeader(partsHeaders, [/make_buy|makebuy|make\/buy|make_or_buy/i], 'make_buy'),
       quantity: findHeader(partsHeaders, [/quantity/i, /qty/i], 'quantity'),
       comments: findHeader(partsHeaders, [/comments/i, /comment/i, /description/i], 'comments'),
-      customId: findHeader(partsHeaders, [/custom_id/i, /custom_part_id/i], 'custom_id'),
+      customId: findHeader(partsHeaders, [/custom_id|custom_part_id|part_no_custom/i], 'custom_id'),
       delete: findHeader(partsHeaders, [/^delete$/i, /deleted/i], 'delete'),
     },
     subparts: {
       uid: findHeader(subpartsHeaders, [/subpart_uid/i], 'subpart_uid'),
       partUid: findHeader(subpartsHeaders, [/part_uid/i], 'part_uid'),
       partNo: findHeader(subpartsHeaders, [/part_no/i, /part_number/i], 'part_no'),
-      name: findHeader(subpartsHeaders, [/^subpart$/i, /^part$/i, /subpart_name/i, /part_name/i, /^name$/i], 'part'),
-      makeBuy: findHeader(subpartsHeaders, [/make_buy/i, /make\/buy/i, /make_or_buy/i], 'make_buy'),
+      name: findHeader(subpartsHeaders, [/^subpart$/i, /^part$/i, /subpart_name/i, /part_name/i, /^name$/i, /^subtype$/i, /^type$/i], 'part'),
+      makeBuy: findHeader(subpartsHeaders, [/make_buy|makebuy|make\/buy|make_or_buy/i], 'make_buy'),
       quantity: findHeader(subpartsHeaders, [/quantity/i, /qty/i], 'quantity'),
       comments: findHeader(subpartsHeaders, [/comments/i, /comment/i, /description/i], 'comments'),
       delete: findHeader(subpartsHeaders, [/^delete$/i, /deleted/i], 'delete'),
@@ -261,14 +261,12 @@ export function exportEntriesToCSV(
     parts.push(partRecord);
 
     // Keep tracked for potential children subparts
-    if (partUid) {
-      subAssemblyPartMap.set(e.part.toLowerCase(), {
-        uid: partUid,
-        assembly_uid: assemblyUid,
-        name: e.part,
-        record: partRecord,
-      });
-    }
+    subAssemblyPartMap.set(e.part.toLowerCase(), {
+      uid: partUid,
+      assembly_uid: assemblyUid,
+      name: e.part,
+      record: partRecord,
+    });
   });
 
   // Step 2: Export Subparts & Ensure parent Sub-Assemblies exist
