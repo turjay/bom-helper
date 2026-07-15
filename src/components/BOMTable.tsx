@@ -1,5 +1,5 @@
-import React from 'react';
-import { Edit2, Trash2, RotateCcw, AlertTriangle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Edit2, Trash2, RotateCcw, AlertTriangle, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import { BOMEntry } from '../types';
 
 interface BOMTableProps {
@@ -17,14 +17,68 @@ export const BOMTable: React.FC<BOMTableProps> = ({
   onEditClick,
   customHeaders,
 }) => {
-  const handleInputChange = (rowIndex: number, field: keyof BOMEntry, value: string) => {
-    const updated = { ...entries[rowIndex], [field]: value };
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const handleInputChange = (entry: BOMEntry, field: keyof BOMEntry, value: string) => {
+    const updated = { ...entry, [field]: value };
     onEntryChange(updated);
   };
 
-  const handleCustomFieldChange = (rowIndex: number, fieldName: string, value: string) => {
-    const updated = { ...entries[rowIndex], [fieldName]: value };
+  const handleCustomFieldChange = (entry: BOMEntry, fieldName: string, value: string) => {
+    const updated = { ...entry, [fieldName]: value };
     onEntryChange(updated);
+  };
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortedEntries = () => {
+    if (!sortField) return entries;
+
+    return [...entries].sort((a, b) => {
+      const valA = a[sortField] !== undefined ? String(a[sortField]).toLowerCase() : '';
+      const valB = b[sortField] !== undefined ? String(b[sortField]).toLowerCase() : '';
+
+      // Numeric comparison
+      const numA = Number(valA);
+      const numB = Number(valB);
+      if (!isNaN(numA) && !isNaN(numB) && valA.trim() !== '' && valB.trim() !== '') {
+        return sortDirection === 'asc' ? numA - numB : numB - numA;
+      }
+
+      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  };
+
+  const sortedEntries = getSortedEntries();
+
+  const renderHeader = (label: string, field: string, width?: string) => {
+    const isSorted = sortField === field;
+    return (
+      <th 
+        onClick={() => handleSort(field)}
+        style={{ cursor: 'pointer', userSelect: 'none', width }}
+        title={`Sort by ${label}`}
+      >
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', whiteSpace: 'nowrap' }}>
+          <span>{label}</span>
+          {isSorted ? (
+            sortDirection === 'asc' ? <ChevronUp size={13} style={{ color: '#818cf8' }} /> : <ChevronDown size={13} style={{ color: '#818cf8' }} />
+          ) : (
+            <ArrowUpDown size={11} style={{ opacity: 0.3 }} />
+          )}
+        </div>
+      </th>
+    );
   };
 
   if (entries.length === 0) {
@@ -42,24 +96,26 @@ export const BOMTable: React.FC<BOMTableProps> = ({
         <thead>
           <tr>
             <th style={{ width: '80px', textAlign: 'center' }}>Actions</th>
-            <th>System</th>
-            <th>Assembly</th>
-            <th>Sub Assembly</th>
-            <th>Part Name</th>
-            <th>Make/Buy</th>
-            <th style={{ width: '80px' }}>Quantity</th>
-            <th style={{ width: '120px' }}>Custom ID</th>
-            <th>Comments</th>
-            <th>Created By</th>
+            {renderHeader('System', 'system')}
+            {renderHeader('Assembly', 'assembly')}
+            {renderHeader('Sub Assembly', 'subAssembly')}
+            {renderHeader('Part Name', 'part')}
+            {renderHeader('Make/Buy', 'make_buy')}
+            {renderHeader('Quantity', 'quantity', '80px')}
+            {renderHeader('Custom ID', 'custom_id', '120px')}
+            {renderHeader('Comments', 'comments')}
+            {renderHeader('Created By', 'createdBy_name')}
             
             {/* Dynamic Headers */}
             {customHeaders.map((header) => (
-              <th key={header}>{header.replace(/_/g, ' ').toUpperCase()}</th>
+              <React.Fragment key={header}>
+                {renderHeader(header.replace(/_/g, ' ').toUpperCase(), header)}
+              </React.Fragment>
             ))}
           </tr>
         </thead>
         <tbody>
-          {entries.map((entry, rowIndex) => {
+          {sortedEntries.map((entry) => {
             const isImported = !!entry._part_uid || !!entry._subpart_uid;
             const isNew = !isImported;
             const isDeleted = entry.delete === '1';
@@ -128,7 +184,7 @@ export const BOMTable: React.FC<BOMTableProps> = ({
                     type="text"
                     className="inline-edit-input"
                     value={entry.part}
-                    onChange={(e) => handleInputChange(rowIndex, 'part', e.target.value)}
+                    onChange={(e) => handleInputChange(entry, 'part', e.target.value)}
                     disabled={isDeleted}
                   />
                 </td>
@@ -139,7 +195,7 @@ export const BOMTable: React.FC<BOMTableProps> = ({
                     className="inline-edit-input"
                     style={{ width: '80px' }}
                     value={entry.make_buy}
-                    onChange={(e) => handleInputChange(rowIndex, 'make_buy', e.target.value)}
+                    onChange={(e) => handleInputChange(entry, 'make_buy', e.target.value)}
                     disabled={isDeleted}
                   >
                     <option value="make">make</option>
@@ -153,7 +209,7 @@ export const BOMTable: React.FC<BOMTableProps> = ({
                     type="text"
                     className="inline-edit-input"
                     value={entry.quantity}
-                    onChange={(e) => handleInputChange(rowIndex, 'quantity', e.target.value)}
+                    onChange={(e) => handleInputChange(entry, 'quantity', e.target.value)}
                     disabled={isDeleted}
                   />
                 </td>
@@ -164,7 +220,7 @@ export const BOMTable: React.FC<BOMTableProps> = ({
                     type="text"
                     className="inline-edit-input"
                     value={entry.custom_id}
-                    onChange={(e) => handleInputChange(rowIndex, 'custom_id', e.target.value)}
+                    onChange={(e) => handleInputChange(entry, 'custom_id', e.target.value)}
                     disabled={isDeleted || isImported}
                   />
                 </td>
@@ -175,7 +231,7 @@ export const BOMTable: React.FC<BOMTableProps> = ({
                     type="text"
                     className="inline-edit-input"
                     value={entry.comments}
-                    onChange={(e) => handleInputChange(rowIndex, 'comments', e.target.value)}
+                    onChange={(e) => handleInputChange(entry, 'comments', e.target.value)}
                     disabled={isDeleted}
                   />
                 </td>
@@ -204,7 +260,7 @@ export const BOMTable: React.FC<BOMTableProps> = ({
                         type="text"
                         className="inline-edit-input"
                         value={val}
-                        onChange={(e) => handleCustomFieldChange(rowIndex, header, e.target.value)}
+                        onChange={(e) => handleCustomFieldChange(entry, header, e.target.value)}
                         disabled={isDeleted}
                       />
                     </td>
