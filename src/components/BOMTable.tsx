@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Edit2, Trash2, RotateCcw, AlertTriangle, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import { BOMEntry } from '../types';
 
@@ -9,6 +9,52 @@ interface BOMTableProps {
   onEditClick: (entry: BOMEntry) => void;
   customHeaders: string[];
 }
+
+interface EditableCellProps {
+  value: string;
+  onChange: (newValue: string) => void;
+  disabled?: boolean;
+  className?: string;
+  type?: string;
+}
+
+const EditableCell: React.FC<EditableCellProps> = ({
+  value,
+  onChange,
+  disabled,
+  className = "inline-edit-input",
+  type = "text",
+}) => {
+  const [localValue, setLocalValue] = useState(value);
+
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  const handleBlur = () => {
+    if (localValue !== value) {
+      onChange(localValue);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.currentTarget.blur();
+    }
+  };
+
+  return (
+    <input
+      type={type}
+      className={className}
+      value={localValue}
+      onChange={(e) => setLocalValue(e.target.value)}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      disabled={disabled}
+    />
+  );
+};
 
 export const BOMTable: React.FC<BOMTableProps> = ({
   entries,
@@ -180,11 +226,9 @@ export const BOMTable: React.FC<BOMTableProps> = ({
 
                 {/* Part Name */}
                 <td>
-                  <input
-                    type="text"
-                    className="inline-edit-input"
+                  <EditableCell
                     value={entry.part}
-                    onChange={(e) => handleInputChange(entry, 'part', e.target.value)}
+                    onChange={(val) => handleInputChange(entry, 'part', val)}
                     disabled={isDeleted}
                   />
                 </td>
@@ -205,33 +249,27 @@ export const BOMTable: React.FC<BOMTableProps> = ({
 
                 {/* Quantity */}
                 <td>
-                  <input
-                    type="text"
-                    className="inline-edit-input"
+                  <EditableCell
                     value={entry.quantity}
-                    onChange={(e) => handleInputChange(entry, 'quantity', e.target.value)}
+                    onChange={(val) => handleInputChange(entry, 'quantity', val)}
                     disabled={isDeleted}
                   />
                 </td>
 
                 {/* Custom ID */}
                 <td>
-                  <input
-                    type="text"
-                    className="inline-edit-input"
+                  <EditableCell
                     value={entry.custom_id}
-                    onChange={(e) => handleInputChange(entry, 'custom_id', e.target.value)}
+                    onChange={(val) => handleInputChange(entry, 'custom_id', val)}
                     disabled={isDeleted || isImported}
                   />
                 </td>
 
                 {/* Comments */}
                 <td>
-                  <input
-                    type="text"
-                    className="inline-edit-input"
+                  <EditableCell
                     value={entry.comments}
-                    onChange={(e) => handleInputChange(entry, 'comments', e.target.value)}
+                    onChange={(val) => handleInputChange(entry, 'comments', val)}
                     disabled={isDeleted}
                   />
                 </td>
@@ -256,11 +294,9 @@ export const BOMTable: React.FC<BOMTableProps> = ({
                   const val = entry[header] !== undefined ? String(entry[header]) : '';
                   return (
                     <td key={header}>
-                      <input
-                        type="text"
-                        className="inline-edit-input"
+                      <EditableCell
                         value={val}
-                        onChange={(e) => handleCustomFieldChange(entry, header, e.target.value)}
+                        onChange={(newVal) => handleCustomFieldChange(entry, header, newVal)}
                         disabled={isDeleted}
                       />
                     </td>
