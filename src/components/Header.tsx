@@ -12,6 +12,10 @@ interface HeaderProps {
   // Auth Props
   user: any;
   onSignOut: () => void;
+
+  // Theme Props
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -23,6 +27,8 @@ export const Header: React.FC<HeaderProps> = ({
   lastSaved,
   user,
   onSignOut,
+  theme,
+  toggleTheme,
 }) => {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -46,15 +52,36 @@ export const Header: React.FC<HeaderProps> = ({
       }}
     >
       <div className="flex-row-center" style={{ gap: '0.75rem' }}>
-        <img
-          src="https://cdn.brandfetch.io/idyER5Z4WA/theme/dark/symbol.svg?c=1dxbfHSJFAPEGdCLU4o5B"
-          alt="Formula Student Symbol"
-          style={{
-            height: '32px',
-            width: 'auto',
-            display: 'block',
-          }}
-        />
+        <div style={{ position: 'relative', width: '32px', height: '32px', display: 'block', flexShrink: 0 }}>
+          <img
+            src="https://cdn.brandfetch.io/idyER5Z4WA/theme/light/symbol.svg?c=1dxbfHSJFAPEGdCLU4o5B"
+            alt="Formula Student Symbol Light"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              opacity: theme === 'dark' ? 1 : 0,
+              transition: 'opacity 0.3s ease',
+            }}
+          />
+          <img
+            src="https://cdn.brandfetch.io/idyER5Z4WA/theme/dark/symbol.svg?c=1dxbfHSJFAPEGdCLU4o5B"
+            alt="Formula Student Symbol Dark"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              opacity: theme === 'light' ? 1 : 0,
+              transition: 'opacity 0.3s ease',
+            }}
+          />
+        </div>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <h1 style={{ fontSize: '1.1rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, letterSpacing: '0.02em', lineHeight: 1.1, color: 'var(--text-bright)' }}>
             BOM HELPER
@@ -83,7 +110,7 @@ export const Header: React.FC<HeaderProps> = ({
             className="flex-row-center"
             style={{
               gap: '0.5rem',
-              background: '#0f172a',
+              background: 'var(--bg-input)',
               border: '1px solid var(--border-color)',
               padding: '0.25rem 0.5rem',
               borderRadius: 'var(--radius-sm)',
@@ -126,6 +153,21 @@ export const Header: React.FC<HeaderProps> = ({
           accept=".json"
           style={{ display: 'none' }}
         />
+
+        <button
+          className="btn btn-secondary btn-sm"
+          onClick={toggleTheme}
+          title={theme === 'light' ? "Switch to Dark Theme" : "Switch to Light Theme"}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '0.25rem 0.5rem',
+            fontSize: '0.85rem'
+          }}
+        >
+          {theme === 'light' ? '🌙' : '☀️'}
+        </button>
 
         <button
           className="btn btn-secondary btn-sm"

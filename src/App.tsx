@@ -62,6 +62,20 @@ export default function App() {
   const [filterAssembly, setFilterAssembly] = useState<string>('');
   const [searchText, setSearchText] = useState<string>('');
 
+  // Theme State
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    return (localStorage.getItem('theme') as 'light' | 'dark') || 'dark';
+  });
+
+  useEffect(() => {
+    if (theme === 'light') {
+      document.body.classList.add('light-theme');
+    } else {
+      document.body.classList.remove('light-theme');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
 
   // Listen to Auth State
@@ -594,7 +608,7 @@ export default function App() {
 
   if (authLoading) {
     return (
-      <div style={{ display: 'grid', placeContent: 'center', height: '100vh', background: 'var(--bg-app)', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+      <div style={{ display: 'grid', placeContent: 'center', height: '100vh', backgroundColor: 'var(--bg-app)', color: 'var(--text-muted)', fontSize: '0.9rem', transition: 'background-color 0.5s ease-in-out, color 0.5s ease-in-out' }}>
         Loading Authentication Session...
       </div>
     );
@@ -603,19 +617,60 @@ export default function App() {
   // RENDER LOGIN SCREEN IF NOT AUTHENTICATED
   if (!user) {
     return (
-      <div style={{ display: 'grid', placeContent: 'center', height: '100vh', background: 'var(--bg-app)', padding: '1.5rem' }}>
-        <div className="panel" style={{ maxWidth: '440px', width: '100%', textAlign: 'center', padding: '2.5rem 2rem', display: 'flex', flexDirection: 'column', gap: '1.75rem', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4)' }}>
+      <div style={{ display: 'grid', placeContent: 'center', height: '100vh', backgroundColor: 'var(--bg-app)', padding: '1.5rem', position: 'relative', transition: 'background-color 0.5s ease-in-out, color 0.5s ease-in-out' }}>
+        {/* Absolute Theme Switcher for Login Screen */}
+        <button
+          className="btn btn-secondary btn-sm"
+          style={{
+            position: 'absolute',
+            top: '1.5rem',
+            right: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            padding: '0.4rem 0.75rem',
+            fontSize: '0.8rem',
+            cursor: 'pointer'
+          }}
+          onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
+        >
+          {theme === 'light' ? '🌙 Koyu Tema' : '☀️ Açık Tema'}
+        </button>
+
+        <div className="panel" style={{ maxWidth: '440px', width: '100%', textAlign: 'center', padding: '2.5rem 2rem', display: 'flex', flexDirection: 'column', gap: '1.75rem', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4)', transition: 'background-color 0.5s ease-in-out, border-color 0.5s ease-in-out, color 0.5s ease-in-out' }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-            <img
-              src="https://cdn.brandfetch.io/idyER5Z4WA/theme/dark/logo.svg?c=1dxbfHSJFAPEGdCLU4o5B"
-              alt="Formula Student Logo"
-              style={{
-                height: '45px',
-                width: 'auto',
-                marginBottom: '0.5rem',
-                filter: 'drop-shadow(0 2px 8px rgba(99, 102, 241, 0.2))'
-              }}
-            />
+            <div style={{ position: 'relative', height: '45px', width: '240px', marginBottom: '0.5rem', flexShrink: 0 }}>
+              <img
+                src="https://cdn.brandfetch.io/idyER5Z4WA/theme/light/logo.svg?c=1dxbfHSJFAPEGdCLU4o5B"
+                alt="Formula Student Logo Light"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  opacity: theme === 'dark' ? 1 : 0,
+                  transition: 'opacity 0.3s ease',
+                  filter: 'drop-shadow(0 2px 8px rgba(0, 102, 94, 0.3))'
+                }}
+              />
+              <img
+                src="https://cdn.brandfetch.io/idyER5Z4WA/theme/dark/logo.svg?c=1dxbfHSJFAPEGdCLU4o5B"
+                alt="Formula Student Logo Dark"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  opacity: theme === 'light' ? 1 : 0,
+                  transition: 'opacity 0.3s ease',
+                  filter: 'drop-shadow(0 2px 8px rgba(0, 102, 94, 0.15))'
+                }}
+              />
+            </div>
             <h2 style={{ fontSize: '1.5rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--text-bright)', letterSpacing: '0.01em' }}>
               BOM ENTRY HELPER
             </h2>
@@ -656,6 +711,8 @@ export default function App() {
         lastSaved={lastSavedTime}
         user={user}
         onSignOut={handleLogout}
+        theme={theme}
+        toggleTheme={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
       />
 
       <div className="workspace-layout">
@@ -799,16 +856,16 @@ export default function App() {
                       alignItems: 'center',
                       gap: '0.35rem',
                       padding: '0.35rem 0.6rem',
-                      background: isTableMaximized ? 'rgba(79, 70, 229, 0.1)' : 'var(--color-secondary)',
-                      borderColor: isTableMaximized ? 'rgba(79, 70, 229, 0.4)' : 'var(--border-color)',
+                      background: isTableMaximized ? 'rgba(0, 102, 94, 0.15)' : 'var(--color-secondary)',
+                      borderColor: isTableMaximized ? 'rgba(0, 102, 94, 0.35)' : 'var(--border-color)',
                       color: isTableMaximized ? 'var(--text-bright)' : 'var(--text-main)',
                       transition: 'all 0.15s ease',
                     }}
                     onClick={() => setIsTableMaximized(!isTableMaximized)}
-                    title={isTableMaximized ? "Küçült (Giriş Formunu Göster)" : "Büyüt (Geniş Tablo)"}
+                    title={isTableMaximized ? "Minimize (Show Entry Form)" : "Maximize (Wide Table)"}
                   >
                     {isTableMaximized ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
-                    <span>{isTableMaximized ? "Küçült" : "Büyüt"}</span>
+                    <span>{isTableMaximized ? "Minimize" : "Maximize"}</span>
                   </button>
                 </div>
 

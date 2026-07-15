@@ -270,8 +270,8 @@ export const BOMExplorerView: React.FC<BOMExplorerViewProps> = ({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      background: isVisible ? 'rgba(79, 70, 229, 0.1)' : 'transparent',
-                      border: '1px solid ' + (isVisible ? 'rgba(79, 70, 229, 0.3)' : 'var(--border-color)'),
+                      background: isVisible ? 'rgba(0, 102, 94, 0.15)' : 'transparent',
+                      border: '1px solid ' + (isVisible ? 'rgba(0, 102, 94, 0.35)' : 'var(--border-color)'),
                       borderRadius: 'var(--radius-sm)',
                       padding: '0.35rem 0.5rem',
                       color: isVisible ? 'var(--text-bright)' : 'var(--text-muted)',
@@ -325,9 +325,9 @@ export const BOMExplorerView: React.FC<BOMExplorerViewProps> = ({
               style={{
                 fontSize: '0.7rem',
                 padding: '0.2rem 0.5rem',
-                background: 'rgba(99, 102, 241, 0.15)',
-                color: '#818cf8',
-                border: '1px solid rgba(99, 102, 241, 0.25)',
+                background: 'rgba(0, 102, 94, 0.15)',
+                color: '#2dd4bf',
+                border: '1px solid rgba(0, 102, 94, 0.25)',
               }}
             >
               Full Height Explorer Active

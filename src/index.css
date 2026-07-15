@@ -2,15 +2,20 @@
 :root {
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   
-  /* Color Palette (Clean Dark Theme) */
+  /* Color Palette (Clean Dark Theme - Default) */
   --bg-app: #121824;
   --bg-panel: #1e293b;
+  --bg-secondary: #161e2e;
   --bg-table-header: #0f172a;
+  --bg-table-wrapper: #1e293b;
+  --bg-input: #0f172a;
+  --bg-input-disabled: #1e293b;
   --border-color: #334155;
-  --border-focus: #6366f1;
+  --border-focus: #00b0a3;
+  --tr-hover-bg: rgba(255, 255, 255, 0.02);
   
-  --color-primary: #4f46e5;
-  --color-primary-hover: #4338ca;
+  --color-primary: #00665e;
+  --color-primary-hover: #00504a;
   --color-secondary: #475569;
   --color-secondary-hover: #334155;
   --color-danger: #dc2626;
@@ -36,6 +41,67 @@
   
   --radius-sm: 4px;
   --radius-md: 6px;
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Light Theme overrides */
+body.light-theme {
+  --bg-app: #f8fafc;
+  --bg-panel: #ffffff;
+  --bg-secondary: #f1f5f9;
+  --bg-table-header: #f1f5f9;
+  --bg-table-wrapper: #ffffff;
+  --bg-input: #ffffff;
+  --bg-input-disabled: #f1f5f9;
+  --border-color: #cbd5e1;
+  --border-focus: #00b0a3;
+  --tr-hover-bg: rgba(0, 0, 0, 0.02);
+  
+  --color-secondary: #e2e8f0;
+  --color-secondary-hover: #cbd5e1;
+  
+  /* Alert/Status Colors */
+  --color-error: #dc2626;
+  --color-error-bg: rgba(220, 38, 38, 0.06);
+  --color-error-border: #fca5a5;
+  
+  --color-warning: #b45309;
+  --color-warning-bg: rgba(180, 83, 9, 0.06);
+  --color-warning-border: #fcd34d;
+  
+  --color-success: #047857;
+  --color-success-bg: rgba(4, 120, 87, 0.06);
+  --color-success-border: #6ee7b7;
+
+  /* Text Colors */
+  --text-main: #334155;
+  --text-muted: #64748b;
+  --text-bright: #0f172a;
+}
+
+/* Smooth Transitions for Theme Swapping */
+body, 
+.app-container,
+.panel, 
+.table-wrapper, 
+.bom-table th, 
+.bom-table td, 
+.form-input, 
+.form-select, 
+.form-textarea, 
+.inline-edit-input, 
+.modal-footer, 
+.dropzone, 
+.test-item, 
+.test-error-log, 
+header,
+.tab-btn,
+.badge,
+.auth-profile,
+button {
+  transition: background 0.5s ease-in-out, background-color 0.5s ease-in-out, color 0.5s ease-in-out, border-color 0.5s ease-in-out, box-shadow 0.5s ease-in-out, filter 0.5s ease-in-out;
 }
 
 /* Global Reset & Base Styling */
@@ -60,6 +126,7 @@ body {
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
+  background-color: var(--bg-app);
 }
 
 .workspace-layout {
@@ -119,7 +186,7 @@ body {
 }
 
 .form-input, .form-select, .form-textarea {
-  background: #0f172a;
+  background: var(--bg-input);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   color: var(--text-bright);
@@ -135,7 +202,7 @@ body {
 }
 
 .form-input:disabled, .form-select:disabled, .form-textarea:disabled {
-  background: #1e293b;
+  background: var(--bg-input-disabled);
   color: var(--text-muted);
   cursor: not-allowed;
 }
@@ -250,7 +317,7 @@ body {
   overflow: auto;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  background: #1e293b;
+  background: var(--bg-table-wrapper);
   flex: 1;
 }
 
@@ -281,7 +348,7 @@ body {
 }
 
 .bom-table tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--tr-hover-bg);
 }
 
 .bom-table tr.row-deleted td {
@@ -291,7 +358,7 @@ body {
 }
 
 .inline-edit-input {
-  background: #0f172a;
+  background: var(--bg-input);
   border: 1px solid var(--border-color);
   color: var(--text-bright);
   padding: 0.25rem 0.375rem;
@@ -402,7 +469,7 @@ body {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
-  background: #161e2e;
+  background: var(--bg-secondary);
 }
 
 /* File Import / Mapping */
@@ -412,7 +479,7 @@ body {
   padding: 1.5rem;
   text-align: center;
   cursor: pointer;
-  background: #161e2e;
+  background: var(--bg-secondary);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -441,7 +508,7 @@ body {
   padding: 0.75rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);
-  background: #1e293b;
+  background: var(--bg-panel);
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -458,7 +525,7 @@ body {
 .test-error-log {
   font-family: monospace;
   font-size: 0.75rem;
-  background: #0f172a;
+  background: var(--bg-input);
   padding: 0.375rem;
   border-radius: var(--radius-sm);
   margin-top: 0.375rem;

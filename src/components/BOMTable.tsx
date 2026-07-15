@@ -209,7 +209,7 @@ export const BOMTable: React.FC<BOMTableProps> = ({
 
                 {/* System Badge */}
                 <td>
-                  <span className="badge" style={{ background: '#334155', color: '#f8fafc', fontWeight: 'bold' }}>
+                  <span className="badge" style={{ background: 'var(--color-secondary)', color: 'var(--text-bright)', fontWeight: 'bold' }}>
                     {entry.system}
                   </span>
                 </td>
@@ -279,7 +279,7 @@ export const BOMTable: React.FC<BOMTableProps> = ({
                   {entry.createdBy_name ? (
                     <span
                       className="badge"
-                      style={{ background: '#334155', color: '#cbd5e1' }}
+                      style={{ background: 'var(--color-secondary)', color: 'var(--text-main)' }}
                       title={entry.createdBy_email}
                     >
                       {entry.createdBy_name}
