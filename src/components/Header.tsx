@@ -46,22 +46,20 @@ export const Header: React.FC<HeaderProps> = ({
       }}
     >
       <div className="flex-row-center" style={{ gap: '0.75rem' }}>
-        <div
+        <img
+          src="https://cdn.brandfetch.io/idyER5Z4WA/theme/dark/symbol.svg?c=1dxbfHSJFAPEGdCLU4o5B"
+          alt="Formula Student Symbol"
           style={{
-            background: 'var(--color-primary)',
-            color: 'white',
-            width: '32px',
             height: '32px',
-            borderRadius: 'var(--radius-sm)',
-            display: 'grid',
-            placeContent: 'center',
+            width: 'auto',
+            display: 'block',
           }}
-        >
-          <Layers size={18} />
-        </div>
-        <div>
-          <h1 style={{ fontSize: '1rem', lineHeight: 1.1 }}>BOM Helper</h1>
-          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+        />
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <h1 style={{ fontSize: '1.1rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, letterSpacing: '0.02em', lineHeight: 1.1, color: 'var(--text-bright)' }}>
+            BOM HELPER
+          </h1>
+          <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
             Formula Student Entry Tool
           </p>
         </div>

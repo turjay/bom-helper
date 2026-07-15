@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { List, Settings, ShieldAlert, Sparkles, Filter, Search, Lock, Users, AlertTriangle, Check } from 'lucide-react';
+import { List, Settings, ShieldAlert, Sparkles, Filter, Search, Lock, Users, AlertTriangle, Check, Maximize2, Minimize2 } from 'lucide-react';
 import { Header } from './components/Header';
 import { BOMForm } from './components/BOMForm';
 import { BOMTable } from './components/BOMTable';
 import { FileImport } from './components/FileImport';
 import { PreviewReport } from './components/PreviewReport';
 import { TestDashboard } from './components/TestDashboard';
+import { BOMExplorerView } from './components/BOMExplorer';
 import { importSnapshotToEntries, generateCSV } from './utils/csvParser';
 import { validateBOM } from './utils/validator';
 import { BOMEntry, AssemblyRow, ValidationError, ColumnMapping, BOMDraft } from './types';
@@ -51,9 +52,10 @@ export default function App() {
   const [columnMapping, setColumnMapping] = useState<ColumnMapping | null>(null);
 
   // UI State
-  const [activeTab, setActiveTab] = useState<'working_list' | 'mapping' | 'preview' | 'tests'>('working_list');
+  const [activeTab, setActiveTab] = useState<'working_list' | 'mapping' | 'preview' | 'tests' | 'bom_explorer'>('working_list');
   const [editingEntry, setEditingEntry] = useState<BOMEntry | null>(null);
   const [lastSavedTime, setLastSavedTime] = useState<string>('');
+  const [isTableMaximized, setIsTableMaximized] = useState<boolean>(false);
 
   // Quick Filters
   const [filterSystem, setFilterSystem] = useState<string>('');
@@ -602,16 +604,28 @@ export default function App() {
   if (!user) {
     return (
       <div style={{ display: 'grid', placeContent: 'center', height: '100vh', background: 'var(--bg-app)', padding: '1.5rem' }}>
-        <div className="panel" style={{ maxWidth: '400px', width: '100%', textAlign: 'center', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-bright)' }}>Formula Student BOM Helper</h2>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+        <div className="panel" style={{ maxWidth: '440px', width: '100%', textAlign: 'center', padding: '2.5rem 2rem', display: 'flex', flexDirection: 'column', gap: '1.75rem', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+            <img
+              src="https://cdn.brandfetch.io/idyER5Z4WA/theme/dark/logo.svg?c=1dxbfHSJFAPEGdCLU4o5B"
+              alt="Formula Student Logo"
+              style={{
+                height: '45px',
+                width: 'auto',
+                marginBottom: '0.5rem',
+                filter: 'drop-shadow(0 2px 8px rgba(99, 102, 241, 0.2))'
+              }}
+            />
+            <h2 style={{ fontSize: '1.5rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--text-bright)', letterSpacing: '0.01em' }}>
+              BOM ENTRY HELPER
+            </h2>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
               Sign in with your Google account to collaborate in real-time with teammates on vehicle entries.
             </p>
           </div>
 
           {!isFirebaseConfigured && (
-            <div className="alert alert-warning" style={{ textAlign: 'left', fontSize: '0.78rem' }}>
+            <div className="alert alert-warning" style={{ textAlign: 'left', fontSize: '0.78rem', lineHeight: 1.35 }}>
               <AlertTriangle size={16} style={{ flexShrink: 0 }} />
               <span>
                 <strong>Running in Offline Mock Mode.</strong> No Firebase API credentials loaded in <code>.env.local</code>. Click login below to launch a local guest developer session.
@@ -621,7 +635,7 @@ export default function App() {
 
           <button
             className="btn btn-primary"
-            style={{ padding: '0.75rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+            style={{ padding: '0.75rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', width: '100%', height: '42px' }}
             onClick={handleLogin}
           >
             <Lock size={16} /> Sign in with Google
@@ -648,24 +662,38 @@ export default function App() {
         <main className="main-content">
           
           {/* Static Entry Form at top of screen */}
-          <BOMForm
-            onAddEntry={handleAddEntry}
-            onUpdateEntry={handleUpdateEntry}
-            editingEntry={editingEntry}
-            onCancelEdit={() => setEditingEntry(null)}
-            existingEntries={entries}
-            assemblies={assemblies}
-            hasMapping={!!columnMapping}
-            columnMapping={columnMapping}
-          />
+          {!isTableMaximized && activeTab !== 'bom_explorer' && (
+            <BOMForm
+              onAddEntry={handleAddEntry}
+              onUpdateEntry={handleUpdateEntry}
+              editingEntry={editingEntry}
+              onCancelEdit={() => setEditingEntry(null)}
+              existingEntries={entries}
+              assemblies={assemblies}
+              hasMapping={!!columnMapping}
+              columnMapping={columnMapping}
+            />
+          )}
 
           {/* Navigation Tabs */}
           <div className="tabs-header">
             <button
               className={`tab-btn ${activeTab === 'working_list' ? 'active' : ''}`}
-              onClick={() => setActiveTab('working_list')}
+              onClick={() => {
+                setActiveTab('working_list');
+                setIsTableMaximized(false);
+              }}
             >
               <List size={14} /> Working BOM List ({filteredEntries.length})
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'bom_explorer' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab('bom_explorer');
+                setIsTableMaximized(false);
+              }}
+            >
+              <Sparkles size={14} style={{ color: activeTab === 'bom_explorer' ? 'var(--color-primary)' : 'var(--text-muted)' }} /> BOM Explorer ({filteredEntries.length})
             </button>
             <button
               className={`tab-btn ${activeTab === 'mapping' ? 'active' : ''}`}
@@ -763,6 +791,25 @@ export default function App() {
                       <span>Live Synced</span>
                     </div>
                   )}
+
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      padding: '0.35rem 0.6rem',
+                      background: isTableMaximized ? 'rgba(79, 70, 229, 0.1)' : 'var(--color-secondary)',
+                      borderColor: isTableMaximized ? 'rgba(79, 70, 229, 0.4)' : 'var(--border-color)',
+                      color: isTableMaximized ? 'var(--text-bright)' : 'var(--text-main)',
+                      transition: 'all 0.15s ease',
+                    }}
+                    onClick={() => setIsTableMaximized(!isTableMaximized)}
+                    title={isTableMaximized ? "Küçült (Giriş Formunu Göster)" : "Büyüt (Geniş Tablo)"}
+                  >
+                    {isTableMaximized ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+                    <span>{isTableMaximized ? "Küçült" : "Büyüt"}</span>
+                  </button>
                 </div>
 
                 {/* Main BOM List Table */}
@@ -774,6 +821,22 @@ export default function App() {
                   customHeaders={customHeaders}
                 />
               </div>
+            )}
+
+            {activeTab === 'bom_explorer' && (
+              <BOMExplorerView
+                entries={entries}
+                assemblies={assemblies}
+                originalEntries={originalEntries}
+                columnMapping={columnMapping}
+                customHeaders={customHeaders}
+                onUpdateEntry={handleUpdateEntry}
+                onEntryDelete={handleEntryDelete}
+                onEditClick={(entry) => {
+                  setEditingEntry(entry);
+                  setActiveTab('working_list');
+                }}
+              />
             )}
 
             {activeTab === 'mapping' && (
