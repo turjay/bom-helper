@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { ShieldAlert, ShieldCheck, Download, AlertTriangle, AlertCircle, FileJson } from 'lucide-react';
+import { ShieldAlert, ShieldCheck, Download, AlertTriangle, AlertCircle, FileJson, FileSpreadsheet } from 'lucide-react';
 import { AssemblyRow, BOMEntry, ValidationError, ColumnMapping } from '../types';
 import { generateCSV, exportEntriesToCSV } from '../utils/csvParser';
+import { exportToExcel } from '../utils/excelExporter';
 
 interface PreviewReportProps {
   entries: BOMEntry[];
@@ -28,8 +29,17 @@ export const PreviewReport: React.FC<PreviewReportProps> = ({
   assembliesHeaders,
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
   const hasMapping = !!mapping;
+
+  const handleExportExcelClick = async () => {
+    try {
+      const prefix = filePrefix || 'BOM_Report';
+      await exportToExcel(entries, assemblies, prefix);
+    } catch (error) {
+      console.error('Failed to export to Excel', error);
+      alert('An error occurred during Excel export.');
+    }
+  };
 
   // Stats calculation
   const newEntries = entries.filter((e) => !e._part_uid && !e._subpart_uid).length;
@@ -222,15 +232,27 @@ export const PreviewReport: React.FC<PreviewReportProps> = ({
           </p>
         </div>
 
-        <button
-          className="btn btn-primary"
-          onClick={handleExportClick}
-          disabled={hasErrors}
-          style={{ padding: '0.75rem 1.5rem', fontSize: '0.875rem' }}
-        >
-          <Download size={16} />
-          {hasMapping ? 'Export FSG CSV' : 'Export Draft CSV'}
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button
+            className="btn btn-secondary"
+            onClick={handleExportExcelClick}
+            disabled={hasErrors}
+            style={{ padding: '0.75rem 1.5rem', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <FileSpreadsheet size={16} />
+            Export Excel
+          </button>
+
+          <button
+            className="btn btn-primary"
+            onClick={handleExportClick}
+            disabled={hasErrors}
+            style={{ padding: '0.75rem 1.5rem', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <Download size={16} />
+            {hasMapping ? 'Export FSG CSV' : 'Export Draft CSV'}
+          </button>
+        </div>
       </div>
 
       {/* 6. DELETION DIALOG */}
