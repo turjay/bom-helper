@@ -95,8 +95,15 @@ export const PreviewReport: React.FC<PreviewReportProps> = ({
       'assembly_uid', 'system', 'assembly', 'sub_assembly', 'assembly_no', 'comments'
     ];
 
+    // Auto-truncate length violations before export
+    const sanitizedEntries = entries.map((e) => ({
+      ...e,
+      part: e.part && e.part.length > 25 ? e.part.substring(0, 25).trim() : e.part,
+      comments: e.comments && e.comments.length > 40 ? e.comments.substring(0, 40).trim() : e.comments,
+    }));
+
     const { parts, subparts, assemblies: exportedAssemblies } = exportEntriesToCSV(
-      entries,
+      sanitizedEntries,
       assemblies,
       resolvedMapping,
       resolvedPartsHeaders,
@@ -261,7 +268,6 @@ export const PreviewReport: React.FC<PreviewReportProps> = ({
           <button
             className="btn btn-secondary"
             onClick={handleExportExcelClick}
-            disabled={hasErrors}
             style={{ padding: '0.75rem 1.5rem', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
           >
             <FileSpreadsheet size={16} />
@@ -271,7 +277,6 @@ export const PreviewReport: React.FC<PreviewReportProps> = ({
           <button
             className="btn btn-primary"
             onClick={handleExportClick}
-            disabled={hasErrors}
             style={{ padding: '0.75rem 1.5rem', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
           >
             <Download size={16} />

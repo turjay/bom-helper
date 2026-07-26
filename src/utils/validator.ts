@@ -167,20 +167,20 @@ export function validateBOM(
     if (partName.length > 25) {
       errors.push({
         id: `part-length-${identifier}`,
-        type: 'error',
+        type: 'warning',
         entryId: entry.id,
         field: 'part',
-        message: `Part name "${partName}" exceeds the 25-character limit (got ${partName.length} characters).`,
+        message: `Part name "${partName}" exceeds the 25-character limit (got ${partName.length} chars). Will be auto-truncated on export.`,
       });
     }
 
     if (commentsText.length > 40) {
       errors.push({
         id: `comments-length-${identifier}`,
-        type: 'error',
+        type: 'warning',
         entryId: entry.id,
         field: 'comments',
-        message: `Comments field exceeds the 40-character limit (got ${commentsText.length} characters).`,
+        message: `Comments exceeds the 40-character limit (got ${commentsText.length} chars). Will be auto-truncated on export.`,
       });
     }
   });
