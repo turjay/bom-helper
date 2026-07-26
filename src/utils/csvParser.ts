@@ -1,5 +1,7 @@
 import Papa from 'papaparse';
 import { ColumnMapping, AssemblyRow, BOMEntry } from '../types';
+import { OFFICIAL_ASSEMBLY_UIDS } from '../fixtures/assemblyCatalog';
+
 
 // Helper to detect column mappings from CSV headers
 export function detectColumnMapping(
@@ -236,23 +238,24 @@ export function exportEntriesToCSV(
       exportedAssemblies.push(existing);
       assemblyUidLookup.set(key, String(existing[mapping.assemblies.uid]));
     } else {
-      // Generate temporary assembly_uid
-      const tempUid = `NEW-A${tempAssemblyIdCounter++}`;
+      // Check if it is an official assembly in our catalog mapping
+      const officialUid = OFFICIAL_ASSEMBLY_UIDS[key];
+      const assemblyUid = officialUid || `NEW-A${tempAssemblyIdCounter++}`;
       const newAssembly: Record<string, any> = {};
       
       // Populate fields according to assembliesHeaders
       assembliesHeaders.forEach((h) => {
         newAssembly[h] = '';
       });
-      newAssembly[mapping.assemblies.uid] = tempUid;
+      newAssembly[mapping.assemblies.uid] = assemblyUid;
       newAssembly[mapping.assemblies.system] = val.system;
       newAssembly[mapping.assemblies.name] = val.assembly;
       newAssembly['sub_assembly'] = 'none';
       newAssembly['assembly_no'] = '';
-      newAssembly['comments'] = 'Auto-generated assembly container';
+      newAssembly['comments'] = officialUid ? 'Official preloaded assembly' : 'Auto-generated assembly container';
 
       exportedAssemblies.push(newAssembly);
-      assemblyUidLookup.set(key, tempUid);
+      assemblyUidLookup.set(key, assemblyUid);
     }
   });
 

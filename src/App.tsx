@@ -414,6 +414,55 @@ export default function App() {
     setEditingEntry(null);
   };
 
+  const handleAutoFixLengthViolations = async () => {
+    const updated = entries.map((e) => {
+      let changed = false;
+      const newEntry = { ...e };
+      if (newEntry.part && newEntry.part.length > 25) {
+        newEntry.part = newEntry.part.substring(0, 25).trim();
+        changed = true;
+      }
+      if (newEntry.comments && newEntry.comments.length > 40) {
+        newEntry.comments = newEntry.comments.substring(0, 40).trim();
+        changed = true;
+      }
+      return { entry: newEntry, changed };
+    });
+
+    const changedItems = updated.filter((item) => item.changed);
+    if (changedItems.length === 0) {
+      alert('No length violations found.');
+      return;
+    }
+
+    if (window.confirm(`Are you sure you want to automatically truncate part names (>25 chars) and comments (>40 chars) for ${changedItems.length} entries?`)) {
+      if (isFirebaseConfigured && db) {
+        try {
+          const batch = writeBatch(db);
+          changedItems.forEach((item) => {
+            const ref = doc(db, 'fsg_bom_entries', item.entry.id);
+            batch.update(ref, {
+              part: item.entry.part,
+              comments: item.entry.comments,
+            });
+          });
+          await batch.commit();
+        } catch (e) {
+          console.error("Firestore batch auto-fix failed:", e);
+          alert("Failed to update database documents. Please check permissions or network.");
+          return;
+        }
+      } else {
+        const nextEntries = entries.map((e) => {
+          const match = changedItems.find((item) => item.entry.id === e.id);
+          return match ? match.entry : e;
+        });
+        setEntries(nextEntries);
+      }
+      alert(`Successfully auto-fixed ${changedItems.length} entries!`);
+    }
+  };
+
   const handleEntryDelete = async (id: string, deleteFlag: boolean) => {
     const entry = entries.find((e) => e.id === id);
     if (!entry) return;
@@ -902,6 +951,7 @@ export default function App() {
                 partsHeaders={partsHeaders}
                 subpartsHeaders={subpartsHeaders}
                 assembliesHeaders={assembliesHeaders}
+                onAutoFix={handleAutoFixLengthViolations}
               />
             )}
 

@@ -15,6 +15,7 @@ interface PreviewReportProps {
   partsHeaders: string[];
   subpartsHeaders: string[];
   assembliesHeaders: string[];
+  onAutoFix?: () => void;
 }
 
 export const PreviewReport: React.FC<PreviewReportProps> = ({
@@ -27,6 +28,7 @@ export const PreviewReport: React.FC<PreviewReportProps> = ({
   partsHeaders,
   subpartsHeaders,
   assembliesHeaders,
+  onAutoFix,
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const hasMapping = !!mapping;
@@ -196,9 +198,31 @@ export const PreviewReport: React.FC<PreviewReportProps> = ({
 
       {/* 4. AUDIT FINDINGS */}
       <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        <h4 style={{ fontSize: '0.875rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-          Verification Log ({validationErrors.length} findings)
-        </h4>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+          <h4 style={{ fontSize: '0.875rem' }}>
+            Verification Log ({validationErrors.length} findings)
+          </h4>
+          {onAutoFix && validationErrors.some((err) => err.id.includes('length')) && (
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{
+                padding: '0.25rem 0.5rem',
+                fontSize: '0.72rem',
+                height: 'auto',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-sm)',
+                background: 'rgba(0, 102, 94, 0.12)',
+                color: 'var(--text-bright)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              onClick={onAutoFix}
+              title="Automatically truncate part names to 25 chars and comments to 40 chars."
+            >
+              🛠️ Auto-fix Length Violations
+            </button>
+          )}
+        </div>
         
         {validationErrors.length === 0 ? (
           <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>

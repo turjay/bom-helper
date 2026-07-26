@@ -467,7 +467,7 @@ export const TestDashboard: React.FC = () => {
         {
           id: 'local-new-asm-1',
           system: 'SU',
-          assembly: 'Bell Cranks',
+          assembly: 'Custom Bellcranks System',
           subAssembly: 'none',
           part: 'Front Bellcrank Left',
           make_buy: 'make',
@@ -509,6 +509,58 @@ export const TestDashboard: React.FC = () => {
       results.push({
         name: 'Dynamic Assembly Generation (Temp UIDs)',
         desc: 'Verifies that new assemblies not in snapshot are dynamically generated in assemblies.csv with a temporary ID and parts reference it.',
+        passed: false,
+        errorLog: e.message || String(e),
+      });
+    }
+
+    // 11. Test: Preloaded Assembly UIDs Lookup
+    try {
+      const entries: BOMEntry[] = [
+        {
+          id: 'local-official-asm-1',
+          system: 'SU',
+          assembly: 'Bell Cranks',
+          subAssembly: 'none',
+          part: 'Front Bellcrank Left',
+          make_buy: 'make',
+          quantity: '1',
+          comments: 'Official assembly lookup test',
+          custom_id: '',
+          delete: '0',
+        },
+      ];
+
+      const assembliesHeaders = ['assembly_uid', 'system', 'assembly', 'sub_assembly', 'assembly_no', 'comments'];
+      const { parts, assemblies: exportedAssemblies } = exportEntriesToCSV(entries, [], mapping, partsHeaders, subpartsHeaders, assembliesHeaders);
+
+      if (exportedAssemblies.length !== 1) {
+        throw new Error(`Expected exactly 1 exported assembly, but got ${exportedAssemblies.length}`);
+      }
+
+      const asmUid = exportedAssemblies[0].assembly_uid;
+      if (asmUid !== '78') {
+        throw new Error(`Expected assembly UID to match preloaded official value "78", but got "${asmUid}"`);
+      }
+
+      if (parts.length !== 1) {
+        throw new Error(`Expected 1 exported part, but got ${parts.length}`);
+      }
+
+      const partAsmUid = parts[0].assembly_uid;
+      if (partAsmUid !== '78') {
+        throw new Error(`Expected exported part assembly_uid to be "78", but got "${partAsmUid}"`);
+      }
+
+      results.push({
+        name: 'Preloaded Assembly UIDs Lookup',
+        desc: 'Verifies that assemblies match preloaded official UIDs (e.g. SU:Bell Cranks -> 78) when not present in the snapshot.',
+        passed: true,
+      });
+    } catch (e: any) {
+      results.push({
+        name: 'Preloaded Assembly UIDs Lookup',
+        desc: 'Verifies that assemblies match preloaded official UIDs (e.g. SU:Bell Cranks -> 78) when not present in the snapshot.',
         passed: false,
         errorLog: e.message || String(e),
       });
