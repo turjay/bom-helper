@@ -242,7 +242,7 @@ export function exportEntriesToCSV(
   let tempAssemblyIdCounter = 1;
 
   uniqueAssembliesMap.forEach((val, key) => {
-    // Check if it exists in the imported assemblies list
+    // Check if it exists in the imported assemblies snapshot
     const existing = assemblies.find((a) => {
       const sysVal = a[mapping.assemblies.system];
       const nameVal = a[mapping.assemblies.name];
@@ -250,12 +250,23 @@ export function exportEntriesToCSV(
     });
 
     if (existing) {
+      // Already imported from snapshot — include in export to preserve it
       exportedAssemblies.push(existing);
       assemblyUidLookup.set(key, String(existing[mapping.assemblies.uid]));
     } else {
-      // Check if it is an official assembly in our catalog mapping
+      // Check if it is an official (pre-existing) FSG catalog assembly
       const officialUid = OFFICIAL_ASSEMBLY_UIDS[key];
-      const assemblyUid = officialUid || `NEW-A${tempAssemblyIdCounter++}`;
+
+      if (officialUid) {
+        // Official assembly already exists in the FSG portal for this team.
+        // Do NOT write it to assemblies.csv — uploading it again confuses the portal.
+        // Just register its UID for parts.csv reference.
+        assemblyUidLookup.set(key, officialUid);
+        return; // skip adding to exportedAssemblies
+      }
+
+      // Truly new assembly not in catalog or snapshot — must be created
+      const assemblyUid = `NEW-A${tempAssemblyIdCounter++}`;
       const newAssembly: Record<string, any> = {};
       
       // Populate fields according to assembliesHeaders
@@ -267,7 +278,7 @@ export function exportEntriesToCSV(
       newAssembly[mapping.assemblies.name] = val.assembly;
       newAssembly['sub_assembly'] = 'none';
       newAssembly['assembly_no'] = '';
-      newAssembly['comments'] = officialUid ? 'Official preloaded assembly' : 'Auto-generated assembly container';
+      newAssembly['comments'] = 'Auto-generated assembly container';
 
       exportedAssemblies.push(newAssembly);
       assemblyUidLookup.set(key, assemblyUid);
