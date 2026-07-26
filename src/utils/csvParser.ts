@@ -1,6 +1,12 @@
 import Papa from 'papaparse';
 import { ColumnMapping, AssemblyRow, BOMEntry } from '../types';
-import { OFFICIAL_ASSEMBLY_UIDS } from '../fixtures/assemblyCatalog';
+import { OFFICIAL_ASSEMBLY_UIDS, OFFICIAL_SYSTEMS } from '../fixtures/assemblyCatalog';
+
+// Expand short system code to full portal format: 'ET' → 'ET - Engine and Tractive System'
+function expandSystemCode(code: string): string {
+  const sys = OFFICIAL_SYSTEMS.find((s) => s.code === code.toUpperCase());
+  return sys ? `${sys.code} - ${sys.name}` : code;
+}
 
 
 // Helper to detect column mappings from CSV headers
@@ -257,7 +263,7 @@ export function exportEntriesToCSV(
         newAssembly[h] = '';
       });
       newAssembly[mapping.assemblies.uid] = assemblyUid;
-      newAssembly[mapping.assemblies.system] = val.system;
+      newAssembly[mapping.assemblies.system] = expandSystemCode(val.system);
       newAssembly[mapping.assemblies.name] = val.assembly;
       newAssembly['sub_assembly'] = 'none';
       newAssembly['assembly_no'] = '';
