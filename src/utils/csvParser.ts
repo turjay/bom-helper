@@ -342,28 +342,9 @@ export function exportEntriesToCSV(
       return;
     }
 
-    // Check OFFICIAL_ASSEMBLY_UIDS from official FSG catalog
-    const officialUid = OFFICIAL_ASSEMBLY_UIDS[catalogKey];
-    if (officialUid) {
-      const asmHeaders = assembliesHeaders.length > 0
-        ? assembliesHeaders
-        : ['assembly_uid', 'system', 'assembly', 'sub_assembly', 'assembly_no', 'comments'];
-
-      const officialAssemblyRow: Record<string, any> = {};
-      asmHeaders.forEach((h) => { officialAssemblyRow[h] = ''; });
-      officialAssemblyRow[mapping.assemblies.uid] = officialUid;
-      officialAssemblyRow[mapping.assemblies.system] = expandSystemCode(val.system);
-      officialAssemblyRow[mapping.assemblies.name] = val.assembly;
-      officialAssemblyRow['sub_assembly'] = 'none';
-      officialAssemblyRow['assembly_no'] = '';
-      officialAssemblyRow['comments'] = '';
-
-      exportedAssemblies.push(officialAssemblyRow);
-      assemblyUidLookup.set(key, officialUid);
-      return;
-    }
-
-    // Assembly is a genuinely NEW custom assembly
+    // Assembly is not in the team's imported snapshot (e.g. blank BOM or new assembly).
+    // Assign a temporary reference key (AREF-x) in BOTH assemblies.csv and parts.csv.
+    // When uploaded together, the portal uses AREF-x to create the assembly and link all parts in the same batch.
     const tempRefKey = `AREF-${tempAssemblyIdCounter++}`;
 
     const newAssembly: Record<string, any> = {};
