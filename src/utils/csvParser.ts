@@ -240,9 +240,8 @@ export function exportEntriesToCSV(
   const exportedAssemblies: any[] = [];
   const assemblyUidLookup = new Map<string, string>();
   let tempAssemblyIdCounter = 1;
-
   uniqueAssembliesMap.forEach((val, key) => {
-    // Check if it exists in the imported assemblies snapshot
+    // Check if it exists in the imported assemblies snapshot (real portal data)
     const existing = assemblies.find((a) => {
       const sysVal = a[mapping.assemblies.system];
       const nameVal = a[mapping.assemblies.name];
@@ -250,39 +249,39 @@ export function exportEntriesToCSV(
     });
 
     if (existing) {
-      // Already imported from snapshot — include in export to preserve it
+      // Already in portal snapshot with a real UID — keep as-is
       exportedAssemblies.push(existing);
       assemblyUidLookup.set(key, String(existing[mapping.assemblies.uid]));
-    } else {
-      // Check if it is an official (pre-existing) FSG catalog assembly
-      const officialUid = OFFICIAL_ASSEMBLY_UIDS[key];
-
-      if (officialUid) {
-        // Official assembly already exists in the FSG portal for this team.
-        // Do NOT write it to assemblies.csv — uploading it again confuses the portal.
-        // Just register its UID for parts.csv reference.
-        assemblyUidLookup.set(key, officialUid);
-        return; // skip adding to exportedAssemblies
-      }
-
-      // Truly new assembly not in catalog or snapshot — must be created
-      const assemblyUid = `NEW-A${tempAssemblyIdCounter++}`;
-      const newAssembly: Record<string, any> = {};
-      
-      // Populate fields according to assembliesHeaders
-      assembliesHeaders.forEach((h) => {
-        newAssembly[h] = '';
-      });
-      newAssembly[mapping.assemblies.uid] = assemblyUid;
-      newAssembly[mapping.assemblies.system] = expandSystemCode(val.system);
-      newAssembly[mapping.assemblies.name] = val.assembly;
-      newAssembly['sub_assembly'] = 'none';
-      newAssembly['assembly_no'] = '';
-      newAssembly['comments'] = 'Auto-generated assembly container';
-
-      exportedAssemblies.push(newAssembly);
-      assemblyUidLookup.set(key, assemblyUid);
+      return;
     }
+
+    // Assembly not yet registered in portal (catalog OR genuinely new).
+    // Strategy per FSG portal docs:
+    //   - Leave assembly_uid EMPTY → portal creates a new assembly
+    //   - Put a temp key in assembly_uid for cross-referencing parts in the SAME upload
+    //     (temp key must contain at least one letter, e.g. "AREF-1")
+    const tempRefKey = `AREF-${tempAssemblyIdCounter++}`;
+
+    const newAssembly: Record<string, any> = {};
+    // Use portal's actual column set (from snapshot headers) if available,
+    // otherwise fall back to defaults
+    const asmHeaders = assembliesHeaders.length > 0
+      ? assembliesHeaders
+      : ['assembly_uid', 'system', 'assembly', 'sub_assembly', 'assembly_no', 'comments'];
+
+    asmHeaders.forEach((h) => { newAssembly[h] = ''; });
+
+    // EMPTY uid so portal creates new; temp key goes in uid for cross-ref
+    newAssembly[mapping.assemblies.uid] = tempRefKey; // temp cross-ref (portal doc allows this)
+    newAssembly[mapping.assemblies.system] = expandSystemCode(val.system);
+    newAssembly[mapping.assemblies.name] = val.assembly;
+    newAssembly['sub_assembly'] = 'none';
+    newAssembly['assembly_no'] = '';
+    newAssembly['comments'] = '';
+
+    exportedAssemblies.push(newAssembly);
+    // Parts will reference tempRefKey; portal maps it to the real assembly
+    assemblyUidLookup.set(key, tempRefKey);
   });
 
   // Track parent Parts created for sub-assemblies
