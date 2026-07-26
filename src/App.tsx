@@ -32,6 +32,32 @@ import {
   orderBy
 } from 'firebase/firestore';
 
+// Default FSG 2026 column mapping — used when no snapshot is uploaded
+const DEFAULT_FSG_MAPPING: ColumnMapping = {
+  assemblies: { uid: 'assembly_uid', name: 'assembly', system: 'system' },
+  parts: {
+    uid: 'part_uid',
+    assemblyUid: 'assembly_uid',
+    partNo: 'part_no',
+    name: 'part',
+    makeBuy: 'makebuy',
+    quantity: 'quantity',
+    comments: 'comments',
+    customId: 'part_no_custom',
+    delete: 'delete',
+  },
+  subparts: {
+    uid: 'subpart_uid',
+    partUid: 'part_uid',
+    partNo: 'part_no',
+    name: 'subtype',
+    makeBuy: 'makebuy',
+    quantity: 'quantity',
+    comments: 'comments',
+    delete: 'delete',
+  },
+};
+
 export default function App() {
   // Auth State
   const [user, setUser] = useState<any | null>(null);
@@ -48,8 +74,8 @@ export default function App() {
   const [partsHeaders, setPartsHeaders] = useState<string[]>([]);
   const [subpartsHeaders, setSubpartsHeaders] = useState<string[]>([]);
 
-  // Mapping Schema
-  const [columnMapping, setColumnMapping] = useState<ColumnMapping | null>(null);
+  // Mapping Schema — initialized with FSG 2026 defaults so export works without a snapshot
+  const [columnMapping, setColumnMapping] = useState<ColumnMapping | null>(DEFAULT_FSG_MAPPING);
 
   // UI State
   const [activeTab, setActiveTab] = useState<'working_list' | 'mapping' | 'preview' | 'tests' | 'bom_explorer'>('working_list');

@@ -199,6 +199,15 @@ export function importSnapshotToEntries(
 }
 
 // Translate unified BOMEntry[] back into parts.csv and subparts.csv records
+// Normalize make_buy to FSG portal format: 'make'→'m', 'buy'→'b'
+function normalizeMakeBuy(val: string | undefined): string {
+  if (!val) return 'b';
+  const v = val.trim().toLowerCase();
+  if (v === 'make' || v === 'm') return 'm';
+  if (v === 'buy' || v === 'b') return 'b';
+  return 'b'; // default to buy for unknown values
+}
+
 export function exportEntriesToCSV(
   entries: BOMEntry[],
   assemblies: AssemblyRow[],
@@ -292,7 +301,7 @@ export function exportEntriesToCSV(
     partRecord[mapping.parts.uid] = partUid;
     partRecord[mapping.parts.assemblyUid] = assemblyUid;
     partRecord[mapping.parts.name] = e.part;
-    partRecord[mapping.parts.makeBuy] = e.make_buy;
+    partRecord[mapping.parts.makeBuy] = normalizeMakeBuy(e.make_buy);
     partRecord[mapping.parts.quantity] = e.quantity;
     partRecord[mapping.parts.comments] = e.comments;
     partRecord[mapping.parts.customId] = e.custom_id;
@@ -340,7 +349,7 @@ export function exportEntriesToCSV(
       newPartRecord[mapping.parts.uid] = tempId;
       newPartRecord[mapping.parts.assemblyUid] = assemblyUid;
       newPartRecord[mapping.parts.name] = parentName;
-      newPartRecord[mapping.parts.makeBuy] = 'make'; // Default make
+      newPartRecord[mapping.parts.makeBuy] = 'm'; // Default make
       newPartRecord[mapping.parts.quantity] = '1';
       newPartRecord[mapping.parts.comments] = 'Auto-generated sub-assembly container';
       newPartRecord[mapping.parts.delete] = e.delete; // If the child subpart is deleted, the container? Default delete=0
@@ -377,7 +386,7 @@ export function exportEntriesToCSV(
     subRecord[mapping.subparts.uid] = e._subpart_uid || '';
     subRecord[mapping.subparts.partUid] = parentInfo.uid;
     subRecord[mapping.subparts.name] = e.part;
-    subRecord[mapping.subparts.makeBuy] = e.make_buy;
+    subRecord[mapping.subparts.makeBuy] = normalizeMakeBuy(e.make_buy);
     subRecord[mapping.subparts.quantity] = e.quantity;
     subRecord[mapping.subparts.comments] = e.comments;
     subRecord[mapping.subparts.delete] = e.delete;

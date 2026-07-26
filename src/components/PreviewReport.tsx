@@ -145,14 +145,14 @@ export const PreviewReport: React.FC<PreviewReportProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', overflowY: 'auto', flex: 1 }}>
       
-      {/* 1. MAPPING REQUIRED NOTIFICATION */}
+      {/* 1. SNAPSHOT INFO NOTIFICATION */}
       {!hasMapping && (
-        <div className="alert alert-error" style={{ alignItems: 'flex-start' }}>
+        <div className="alert alert-warning" style={{ alignItems: 'flex-start' }}>
           <AlertTriangle size={20} style={{ flexShrink: 0, marginTop: '2px' }} />
           <div>
-            <h4 style={{ fontWeight: 600 }}>Official assembly_uid mapping is missing.</h4>
+            <h4 style={{ fontWeight: 600 }}>Using default FSG 2026 column mapping.</h4>
             <p style={{ color: 'inherit', fontSize: '0.8125rem' }}>
-              Import the official FSG snapshot in the "FSG Snapshot / Mapping" settings tab before performing your final CSV export. Without a snapshot, generated CSV files will use placeholder IDs and cannot be imported directly into the FSG portal.
+              No snapshot was imported — official assembly UIDs are resolved from the built-in catalog (175 assemblies). You can optionally import a snapshot in the "FSG Snapshot / Mapping" tab.
             </p>
           </div>
         </div>
