@@ -8,6 +8,23 @@ function expandSystemCode(code: string): string {
   return sys ? `${sys.code} - ${sys.name}` : code;
 }
 
+// Extract short 2-letter system code: 'ET - Engine and Tractive System' → 'et', 'ET' → 'et'
+function getSystemCode(systemStr: string): string {
+  if (!systemStr) return '';
+  const trimmed = systemStr.trim();
+  const prefixMatch = trimmed.match(/^([A-Z]{2})\b/i);
+  if (prefixMatch) {
+    const code = prefixMatch[1].toUpperCase();
+    if (OFFICIAL_SYSTEMS.some((s) => s.code === code)) {
+      return code.toLowerCase();
+    }
+  }
+  const sysByName = OFFICIAL_SYSTEMS.find(
+    (s) => s.name.toLowerCase() === trimmed.toLowerCase() || trimmed.toLowerCase().includes(s.name.toLowerCase())
+  );
+  if (sysByName) return sysByName.code.toLowerCase();
+  return trimmed.toLowerCase();
+}
 
 // Helper to detect column mappings from CSV headers
 export function detectColumnMapping(
@@ -102,28 +119,30 @@ export function generateCSV<T extends Record<string, any>>(data: T[], headers: s
   return Papa.unparse({
     fields: headers,
     data: processedData,
-  }, {
-    quotes: false,
-    header: true,
-    newline: '\r\n',
   });
 }
 
-// Convert flat CSV rows from official snapshot to our unified BOMEntry array
-export function importSnapshotToEntries(
-  partsData: any[],
-  subpartsData: any[],
-  assembliesData: any[],
+// Convert parts.csv, subparts.csv, assemblies.csv into unified BOMEntry[]
+export function parseBOMCSVs(
+  assembliesData: Record<string, string>[],
+  partsData: Record<string, string>[],
+  subpartsData: Record<string, string>[],
   mapping: ColumnMapping
 ): BOMEntry[] {
   const entries: BOMEntry[] = [];
 
-  // Create lookups
-  const assemblyMap = new Map(assembliesData.map((a) => [String(a[mapping.assemblies.uid]), a]));
-  const partMap = new Map(partsData.map((p) => [String(p[mapping.parts.uid]), p]));
+  // Maps for fast cross-referencing
+  const assemblyMap = new Map<string, Record<string, string>>();
+  assembliesData.forEach((a) => {
+    const uid = String(a[mapping.assemblies.uid] || '');
+    if (uid) assemblyMap.set(uid, a);
+  });
 
-  // Track part UIDs that are used as sub-assemblies (i.e. parent parts of subparts)
-  const parentPartUids = new Set(subpartsData.map((s) => String(s[mapping.subparts.partUid])));
+  const partMap = new Map<string, Record<string, string>>();
+  partsData.forEach((p) => {
+    const uid = String(p[mapping.parts.uid] || '');
+    if (uid) partMap.set(uid, p);
+  });
 
   // 1. Process all Parts
   partsData.forEach((part, index) => {
@@ -131,17 +150,19 @@ export function importSnapshotToEntries(
     const assemblyUid = String(part[mapping.parts.assemblyUid] || '');
     const assembly = assemblyMap.get(assemblyUid);
 
-    const system = assembly ? String(assembly[mapping.assemblies.system]) : '';
-    const assemblyName = assembly ? String(assembly[mapping.assemblies.name]) : '';
+    let system = '';
+    let assemblyName = '';
 
-    const isSubAssembly = parentPartUids.has(partUid);
+    if (assembly) {
+      system = String(assembly[mapping.assemblies.system] || '');
+      assemblyName = String(assembly[mapping.assemblies.name] || '');
+    }
 
-    // Add Part Entry
     entries.push({
       id: `part-${partUid || index}`,
       system,
       assembly: assemblyName,
-      subAssembly: 'none', // Its own entry in parts.csv has no sub-assembly grouping column
+      subAssembly: 'none', // Direct part under assembly
       part: String(part[mapping.parts.name] || ''),
       make_buy: String(part[mapping.parts.makeBuy] || 'make'),
       quantity: String(part[mapping.parts.quantity] || '1'),
@@ -149,11 +170,8 @@ export function importSnapshotToEntries(
       custom_id: String(part[mapping.parts.customId] || ''),
       delete: String(part[mapping.parts.delete] || '0'),
       
-      // Keep references
       _part_uid: partUid,
       _assembly_uid: assemblyUid,
-      
-      // Preserve other fields
       ...part,
     });
   });
@@ -174,8 +192,8 @@ export function importSnapshotToEntries(
       subAssembly = String(parentPart[mapping.parts.name] || '');
       const assembly = assemblyMap.get(assemblyUid);
       if (assembly) {
-        system = String(assembly[mapping.assemblies.system]);
-        assemblyName = String(assembly[mapping.assemblies.name]);
+        system = String(assembly[mapping.assemblies.system] || '');
+        assemblyName = String(assembly[mapping.assemblies.name] || '');
       }
     }
 
@@ -188,12 +206,11 @@ export function importSnapshotToEntries(
       make_buy: String(sub[mapping.subparts.makeBuy] || 'make'),
       quantity: String(sub[mapping.subparts.quantity] || '1'),
       comments: String(sub[mapping.subparts.comments] || ''),
-      custom_id: '', // subparts don't have custom_id in parts.csv logic
+      custom_id: '',
       delete: String(sub[mapping.subparts.delete] || '0'),
       
-      // Keep references
       _subpart_uid: subpartUid,
-      _part_uid: parentPartUid, // Keep track of parent part UID
+      _part_uid: parentPartUid,
       _parent_part_uid: parentPartUid,
       _assembly_uid: assemblyUid,
 
@@ -204,6 +221,69 @@ export function importSnapshotToEntries(
   return entries;
 }
 
+// Convert portal snapshot (parts + assemblies) into unified BOMEntry[]
+export function importSnapshotToEntries(
+  partsData: Record<string, string>[],
+  assembliesData: Record<string, string>[],
+  subpartsData: Record<string, string>[] = [],
+  mapping: ColumnMapping
+): BOMEntry[] {
+  return parseBOMCSVs(assembliesData, partsData, subpartsData, mapping);
+}
+
+/**
+ * Step 1 of the 2-step FSG portal workflow:
+ * Generate assemblies.csv with EMPTY assembly_uid for new custom assemblies
+ * so the portal creates new assembly records and assigns real UIDs.
+ */
+export function exportAssembliesRegistrationCSV(
+  entries: BOMEntry[],
+  assemblies: AssemblyRow[],
+  mapping: ColumnMapping,
+  assembliesHeaders: string[] = ['assembly_uid', 'system', 'assembly', 'sub_assembly', 'assembly_no', 'comments']
+): string {
+  const seen = new Map<string, { system: string; assembly: string }>();
+  entries.forEach((e) => {
+    if (e.system && e.assembly) {
+      const key = `${e.system}:${e.assembly}`.toLowerCase();
+      if (!seen.has(key)) seen.set(key, { system: e.system, assembly: e.assembly });
+    }
+  });
+
+  const rows: any[] = [];
+  seen.forEach((val) => {
+    const sysCode = getSystemCode(val.system);
+    const catalogKey = `${sysCode}:${val.assembly.trim()}`.toLowerCase();
+    
+    // Skip official FSG assemblies (they already exist in the portal)
+    if (OFFICIAL_ASSEMBLY_UIDS[catalogKey]) return;
+
+    // Skip assemblies already in the imported snapshot
+    const existsInSnapshot = assemblies.some((a) => {
+      const sysVal = a[mapping.assemblies.system];
+      const nameVal = a[mapping.assemblies.name];
+      return (
+        sysVal && nameVal &&
+        getSystemCode(String(sysVal)) === sysCode &&
+        String(nameVal).trim().toLowerCase() === val.assembly.trim().toLowerCase()
+      );
+    });
+    if (existsInSnapshot) return;
+
+    const row: Record<string, any> = {};
+    assembliesHeaders.forEach((h) => { row[h] = ''; });
+    row[mapping.assemblies.uid] = ''; // EMPTY — portal assigns the real UID
+    row[mapping.assemblies.system] = expandSystemCode(val.system);
+    row[mapping.assemblies.name] = val.assembly;
+    row['sub_assembly'] = 'none';
+    row['assembly_no'] = '';
+    row['comments'] = '';
+    rows.push(row);
+  });
+
+  return Papa.unparse(rows, { header: true, columns: assembliesHeaders });
+}
+
 // Translate unified BOMEntry[] back into parts.csv and subparts.csv records
 // Normalize make_buy to FSG portal format: 'make'→'m', 'buy'→'b'
 function normalizeMakeBuy(val: string | undefined): string {
@@ -211,7 +291,7 @@ function normalizeMakeBuy(val: string | undefined): string {
   const v = val.trim().toLowerCase();
   if (v === 'make' || v === 'm') return 'm';
   if (v === 'buy' || v === 'b') return 'b';
-  return 'b'; // default to buy for unknown values
+  return 'b';
 }
 
 export function exportEntriesToCSV(
@@ -240,39 +320,60 @@ export function exportEntriesToCSV(
   const exportedAssemblies: any[] = [];
   const assemblyUidLookup = new Map<string, string>();
   let tempAssemblyIdCounter = 1;
+
   uniqueAssembliesMap.forEach((val, key) => {
+    const sysCode = getSystemCode(val.system);
+    const catalogKey = `${sysCode}:${val.assembly.trim()}`.toLowerCase();
+
     // Check if it exists in the imported assemblies snapshot (real portal data)
     const existing = assemblies.find((a) => {
       const sysVal = a[mapping.assemblies.system];
       const nameVal = a[mapping.assemblies.name];
-      return sysVal && nameVal && `${sysVal}:${nameVal}`.toLowerCase() === key;
+      return (
+        sysVal && nameVal &&
+        getSystemCode(String(sysVal)) === sysCode &&
+        String(nameVal).trim().toLowerCase() === val.assembly.trim().toLowerCase()
+      );
     });
 
-    if (existing) {
-      // Already in portal snapshot with a real UID — keep as-is
+    if (existing && existing[mapping.assemblies.uid] && !String(existing[mapping.assemblies.uid]).startsWith('AREF-')) {
       exportedAssemblies.push(existing);
       assemblyUidLookup.set(key, String(existing[mapping.assemblies.uid]));
       return;
     }
 
-    // Assembly not yet registered in portal (catalog OR genuinely new).
-    // Strategy per FSG portal docs:
-    //   - Leave assembly_uid EMPTY → portal creates a new assembly
-    //   - Put a temp key in assembly_uid for cross-referencing parts in the SAME upload
-    //     (temp key must contain at least one letter, e.g. "AREF-1")
+    // Check OFFICIAL_ASSEMBLY_UIDS from official FSG catalog
+    const officialUid = OFFICIAL_ASSEMBLY_UIDS[catalogKey];
+    if (officialUid) {
+      const asmHeaders = assembliesHeaders.length > 0
+        ? assembliesHeaders
+        : ['assembly_uid', 'system', 'assembly', 'sub_assembly', 'assembly_no', 'comments'];
+
+      const officialAssemblyRow: Record<string, any> = {};
+      asmHeaders.forEach((h) => { officialAssemblyRow[h] = ''; });
+      officialAssemblyRow[mapping.assemblies.uid] = officialUid;
+      officialAssemblyRow[mapping.assemblies.system] = expandSystemCode(val.system);
+      officialAssemblyRow[mapping.assemblies.name] = val.assembly;
+      officialAssemblyRow['sub_assembly'] = 'none';
+      officialAssemblyRow['assembly_no'] = '';
+      officialAssemblyRow['comments'] = '';
+
+      exportedAssemblies.push(officialAssemblyRow);
+      assemblyUidLookup.set(key, officialUid);
+      return;
+    }
+
+    // Assembly is a genuinely NEW custom assembly
     const tempRefKey = `AREF-${tempAssemblyIdCounter++}`;
 
     const newAssembly: Record<string, any> = {};
-    // Use portal's actual column set (from snapshot headers) if available,
-    // otherwise fall back to defaults
     const asmHeaders = assembliesHeaders.length > 0
       ? assembliesHeaders
       : ['assembly_uid', 'system', 'assembly', 'sub_assembly', 'assembly_no', 'comments'];
 
     asmHeaders.forEach((h) => { newAssembly[h] = ''; });
 
-    // EMPTY uid so portal creates new; temp key goes in uid for cross-ref
-    newAssembly[mapping.assemblies.uid] = tempRefKey; // temp cross-ref (portal doc allows this)
+    newAssembly[mapping.assemblies.uid] = tempRefKey;
     newAssembly[mapping.assemblies.system] = expandSystemCode(val.system);
     newAssembly[mapping.assemblies.name] = val.assembly;
     newAssembly['sub_assembly'] = 'none';
@@ -280,12 +381,10 @@ export function exportEntriesToCSV(
     newAssembly['comments'] = '';
 
     exportedAssemblies.push(newAssembly);
-    // Parts will reference tempRefKey; portal maps it to the real assembly
     assemblyUidLookup.set(key, tempRefKey);
   });
 
   // Track parent Parts created for sub-assemblies
-  // subAssemblyName -> Part record
   const subAssemblyPartMap = new Map<string, any>();
   let tempPartIdCounter = 1;
 
@@ -308,18 +407,26 @@ export function exportEntriesToCSV(
     
     // Resolve assembly_uid
     const aKey = `${e.system}:${e.assembly}`.toLowerCase();
-    const assemblyUid = e._assembly_uid || assemblyUidLookup.get(aKey) || '';
+    let assemblyUid = e._assembly_uid || '';
+    if (!assemblyUid || assemblyUid.startsWith('AREF-')) {
+      assemblyUid = assemblyUidLookup.get(aKey) || '';
+    }
 
-    // Create a base parts record mapping fields
+    // Truncate fields per FSG limits
+    const rawPartName = e.part || '';
+    const partName = rawPartName.length > 25 ? rawPartName.substring(0, 25).trim() : rawPartName;
+    const rawComments = e.comments || '';
+    const commentsText = rawComments.length > 40 ? rawComments.substring(0, 40).trim() : rawComments;
+
     const partRecord: Record<string, any> = { ...e };
     
     // Set official keys
     partRecord[mapping.parts.uid] = partUid;
     partRecord[mapping.parts.assemblyUid] = assemblyUid;
-    partRecord[mapping.parts.name] = e.part;
+    partRecord[mapping.parts.name] = partName;
     partRecord[mapping.parts.makeBuy] = normalizeMakeBuy(e.make_buy);
     partRecord[mapping.parts.quantity] = e.quantity;
-    partRecord[mapping.parts.comments] = e.comments;
+    partRecord[mapping.parts.comments] = commentsText;
     partRecord[mapping.parts.customId] = e.custom_id;
     partRecord[mapping.parts.delete] = e.delete;
 
@@ -334,7 +441,7 @@ export function exportEntriesToCSV(
     subAssemblyPartMap.set(e.part.toLowerCase(), {
       uid: partUid,
       assembly_uid: assemblyUid,
-      name: e.part,
+      name: partName,
       record: partRecord,
     });
   });
@@ -352,7 +459,10 @@ export function exportEntriesToCSV(
     if (!parentInfo) {
       // Find system / assembly from the subpart entry
       const aKey = `${e.system}:${e.assembly}`.toLowerCase();
-      const assemblyUid = e._assembly_uid || assemblyUidLookup.get(aKey) || '';
+      let assemblyUid = e._assembly_uid || '';
+      if (!assemblyUid || assemblyUid.startsWith('AREF-')) {
+        assemblyUid = assemblyUidLookup.get(aKey) || '';
+      }
       
       const tempId = `NEW-${tempPartIdCounter++}`;
       
@@ -362,20 +472,23 @@ export function exportEntriesToCSV(
         newPartRecord[h] = '';
       });
 
+      const rawParentName = parentName || '';
+      const truncatedParentName = rawParentName.length > 25 ? rawParentName.substring(0, 25).trim() : rawParentName;
+
       newPartRecord[mapping.parts.uid] = tempId;
       newPartRecord[mapping.parts.assemblyUid] = assemblyUid;
-      newPartRecord[mapping.parts.name] = parentName;
+      newPartRecord[mapping.parts.name] = truncatedParentName;
       newPartRecord[mapping.parts.makeBuy] = 'm'; // Default make
       newPartRecord[mapping.parts.quantity] = '1';
       newPartRecord[mapping.parts.comments] = 'Auto-generated sub-assembly container';
-      newPartRecord[mapping.parts.delete] = e.delete; // If the child subpart is deleted, the container? Default delete=0
+      newPartRecord[mapping.parts.delete] = e.delete; 
 
       parts.push(newPartRecord);
       
       parentInfo = {
         uid: tempId,
         assembly_uid: assemblyUid,
-        name: parentName,
+        name: truncatedParentName,
         record: newPartRecord,
       };
       
@@ -396,15 +509,20 @@ export function exportEntriesToCSV(
       }
     }
 
+    const rawSubpartName = e.part || '';
+    const subpartName = rawSubpartName.length > 25 ? rawSubpartName.substring(0, 25).trim() : rawSubpartName;
+    const rawComments = e.comments || '';
+    const commentsText = rawComments.length > 40 ? rawComments.substring(0, 40).trim() : rawComments;
+
     // Now write the subpart row
     const subRecord: Record<string, any> = { ...e };
 
     subRecord[mapping.subparts.uid] = e._subpart_uid || '';
     subRecord[mapping.subparts.partUid] = parentInfo.uid;
-    subRecord[mapping.subparts.name] = e.part;
+    subRecord[mapping.subparts.name] = subpartName;
     subRecord[mapping.subparts.makeBuy] = normalizeMakeBuy(e.make_buy);
     subRecord[mapping.subparts.quantity] = e.quantity;
-    subRecord[mapping.subparts.comments] = e.comments;
+    subRecord[mapping.subparts.comments] = commentsText;
     subRecord[mapping.subparts.delete] = e.delete;
 
     // Clean up internal _ keys
