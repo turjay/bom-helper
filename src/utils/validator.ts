@@ -159,6 +159,30 @@ export function validateBOM(
         });
       }
     }
+
+    // 7. Check field length limits (FSG rules: part name <= 25 chars, comments <= 40 chars)
+    const partName = entry.part || '';
+    const commentsText = entry.comments || '';
+
+    if (partName.length > 25) {
+      errors.push({
+        id: `part-length-${identifier}`,
+        type: 'error',
+        entryId: entry.id,
+        field: 'part',
+        message: `Part name "${partName}" exceeds the 25-character limit (got ${partName.length} characters).`,
+      });
+    }
+
+    if (commentsText.length > 40) {
+      errors.push({
+        id: `comments-length-${identifier}`,
+        type: 'error',
+        entryId: entry.id,
+        field: 'comments',
+        message: `Comments field exceeds the 40-character limit (got ${commentsText.length} characters).`,
+      });
+    }
   });
 
   return errors;

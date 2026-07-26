@@ -406,6 +406,114 @@ export const TestDashboard: React.FC = () => {
         errorLog: e.message || String(e),
       });
     }
+
+    // 9. Test: Name and Comment Length Validations
+    try {
+      const longNameEntry: BOMEntry = {
+        id: 'local-long-name',
+        system: 'BR',
+        assembly: 'Brake Discs',
+        subAssembly: 'none',
+        part: 'This part name is way too long and exceeds twenty five characters limit',
+        make_buy: 'make',
+        quantity: '1',
+        comments: 'Short comment',
+        custom_id: '',
+        delete: '0',
+      };
+
+      const longCommentEntry: BOMEntry = {
+        id: 'local-long-comment',
+        system: 'BR',
+        assembly: 'Brake Discs',
+        subAssembly: 'none',
+        part: 'Valid Part',
+        make_buy: 'make',
+        quantity: '1',
+        comments: 'This comments field is way too long and exceeds forty characters limit',
+        custom_id: '',
+        delete: '0',
+      };
+
+      const errors1 = validateBOM([longNameEntry], assemblies, [], mapping);
+      const nameError = errors1.find((e) => e.field === 'part' && e.message.includes('exceeds the 25-character limit'));
+      if (!nameError) {
+        throw new Error('Expected validation error for part name exceeding 25-character limit, but none was flagged.');
+      }
+
+      const errors2 = validateBOM([longCommentEntry], assemblies, [], mapping);
+      const commentError = errors2.find((e) => e.field === 'comments' && e.message.includes('exceeds the 40-character limit'));
+      if (!commentError) {
+        throw new Error('Expected validation error for comments exceeding 40-character limit, but none was flagged.');
+      }
+
+      results.push({
+        name: 'Part Name and Comment Length Limits',
+        desc: 'Verifies that part names exceeding 25 chars and comments exceeding 40 chars are flagged as errors.',
+        passed: true,
+      });
+    } catch (e: any) {
+      results.push({
+        name: 'Part Name and Comment Length Limits',
+        desc: 'Verifies that part names exceeding 25 chars and comments exceeding 40 chars are flagged as errors.',
+        passed: false,
+        errorLog: e.message || String(e),
+      });
+    }
+
+    // 10. Test: Dynamic Assembly Generation with Temp UIDs
+    try {
+      const entries: BOMEntry[] = [
+        {
+          id: 'local-new-asm-1',
+          system: 'SU',
+          assembly: 'Bell Cranks',
+          subAssembly: 'none',
+          part: 'Front Bellcrank Left',
+          make_buy: 'make',
+          quantity: '1',
+          comments: 'New assembly test',
+          custom_id: '',
+          delete: '0',
+        },
+      ];
+
+      // pass empty assemblies list to simulate brand new/empty snapshot
+      const assembliesHeaders = ['assembly_uid', 'system', 'assembly', 'sub_assembly', 'assembly_no', 'comments'];
+      const { parts, assemblies: exportedAssemblies } = exportEntriesToCSV(entries, [], mapping, partsHeaders, subpartsHeaders, assembliesHeaders);
+
+      if (exportedAssemblies.length !== 1) {
+        throw new Error(`Expected exactly 1 exported assembly, but got ${exportedAssemblies.length}`);
+      }
+
+      const asmUid = exportedAssemblies[0].assembly_uid;
+      if (!asmUid || !asmUid.startsWith('NEW-A')) {
+        throw new Error(`Expected generated assembly to have a temporary ID starting with "NEW-A", but got "${asmUid}"`);
+      }
+
+      if (parts.length !== 1) {
+        throw new Error(`Expected 1 exported part, but got ${parts.length}`);
+      }
+
+      const partAsmUid = parts[0].assembly_uid;
+      if (partAsmUid !== asmUid) {
+        throw new Error(`Expected exported part assembly_uid "${partAsmUid}" to match exported assembly UID "${asmUid}"`);
+      }
+
+      results.push({
+        name: 'Dynamic Assembly Generation (Temp UIDs)',
+        desc: 'Verifies that new assemblies not in snapshot are dynamically generated in assemblies.csv with a temporary ID and parts reference it.',
+        passed: true,
+      });
+    } catch (e: any) {
+      results.push({
+        name: 'Dynamic Assembly Generation (Temp UIDs)',
+        desc: 'Verifies that new assemblies not in snapshot are dynamically generated in assemblies.csv with a temporary ID and parts reference it.',
+        passed: false,
+        errorLog: e.message || String(e),
+      });
+    }
+
     setTests(results);
     setIsRunning(false);
   };

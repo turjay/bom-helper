@@ -7,7 +7,7 @@ import { FileImport } from './components/FileImport';
 import { PreviewReport } from './components/PreviewReport';
 import { TestDashboard } from './components/TestDashboard';
 import { BOMExplorerView } from './components/BOMExplorer';
-import { importSnapshotToEntries, generateCSV } from './utils/csvParser';
+import { importSnapshotToEntries, generateCSV, detectColumnMapping } from './utils/csvParser';
 import { validateBOM } from './utils/validator';
 import { BOMEntry, AssemblyRow, ValidationError, ColumnMapping, BOMDraft } from './types';
 import { OFFICIAL_SYSTEMS, OFFICIAL_ASSEMBLIES } from './fixtures/assemblyCatalog';
@@ -456,30 +456,11 @@ export default function App() {
     subpartsHeaders: string[];
     filePrefix: string;
   }) => {
-    const detectedMapping = {
-      assemblies: { uid: 'assembly_uid', name: 'assembly', system: 'system' },
-      parts: {
-        uid: 'part_uid',
-        assemblyUid: 'assembly_uid',
-        partNo: 'part_no',
-        name: 'part',
-        makeBuy: 'make_buy',
-        quantity: 'quantity',
-        comments: 'comments',
-        customId: 'custom_id',
-        delete: 'delete',
-      },
-      subparts: {
-        uid: 'subpart_uid',
-        partUid: 'part_uid',
-        partNo: 'part_no',
-        name: 'part',
-        makeBuy: 'make_buy',
-        quantity: 'quantity',
-        comments: 'comments',
-        delete: 'delete',
-      },
-    };
+    const detectedMapping = detectColumnMapping(
+      data.assembliesHeaders,
+      data.partsHeaders,
+      data.subpartsHeaders
+    );
 
     const importedEntries = importSnapshotToEntries(
       data.parts,

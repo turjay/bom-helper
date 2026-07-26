@@ -65,18 +65,18 @@ export const PreviewReport: React.FC<PreviewReportProps> = ({
         assemblyUid: 'assembly_uid',
         partNo: 'part_no',
         name: 'part',
-        makeBuy: 'make_buy',
+        makeBuy: 'makebuy',
         quantity: 'quantity',
         comments: 'comments',
-        customId: 'custom_id',
+        customId: 'part_no_custom',
         delete: 'delete',
       },
       subparts: {
         uid: 'subpart_uid',
         partUid: 'part_uid',
         partNo: 'part_no',
-        name: 'part',
-        makeBuy: 'make_buy',
+        name: 'subtype',
+        makeBuy: 'makebuy',
         quantity: 'quantity',
         comments: 'comments',
         delete: 'delete',
@@ -84,26 +84,27 @@ export const PreviewReport: React.FC<PreviewReportProps> = ({
     };
 
     const resolvedPartsHeaders = partsHeaders.length > 0 ? partsHeaders : [
-      'part_uid', 'assembly_uid', 'part_no', 'part', 'make_buy', 'quantity', 'comments', 'custom_id', 'delete'
+      'part_uid', 'assembly_uid', 'system', 'assembly', 'sub_assembly', 'part_no', 'part', 'part_no_custom', 'makebuy', 'quantity', 'comments', 'delete'
     ];
     const resolvedSubpartsHeaders = subpartsHeaders.length > 0 ? subpartsHeaders : [
-      'subpart_uid', 'part_uid', 'part_no', 'part', 'make_buy', 'quantity', 'comments', 'delete'
+      'subpart_uid', 'part_uid', 'part_no', 'type', 'subtype', 'quantity', 'costs', 'comments', 'comments_costs', 'emissions', 'comments_emissions', 'sorting', 'delete'
     ];
     const resolvedAssembliesHeaders = assembliesHeaders.length > 0 ? assembliesHeaders : [
-      'assembly_uid', 'assembly', 'system'
+      'assembly_uid', 'system', 'assembly', 'sub_assembly', 'assembly_no', 'comments'
     ];
 
-    const { parts, subparts } = exportEntriesToCSV(
+    const { parts, subparts, assemblies: exportedAssemblies } = exportEntriesToCSV(
       entries,
       assemblies,
       resolvedMapping,
       resolvedPartsHeaders,
-      resolvedSubpartsHeaders
+      resolvedSubpartsHeaders,
+      resolvedAssembliesHeaders
     );
 
     const prefix = filePrefix || 'DRAFT_BOM';
 
-    const assembliesCSV = generateCSV(assemblies, resolvedAssembliesHeaders);
+    const assembliesCSV = generateCSV(exportedAssemblies, resolvedAssembliesHeaders);
     const partsCSV = generateCSV(parts, resolvedPartsHeaders);
     const subpartsCSV = generateCSV(subparts, resolvedSubpartsHeaders);
 

@@ -26,18 +26,18 @@ export function detectColumnMapping(
       assemblyUid: findHeader(partsHeaders, [/assembly_uid/i], 'assembly_uid'),
       partNo: findHeader(partsHeaders, [/part_no/i, /part_number/i], 'part_no'),
       name: findHeader(partsHeaders, [/^part$/i, /part_name/i, /^name$/i], 'part'),
-      makeBuy: findHeader(partsHeaders, [/make_buy|makebuy|make\/buy|make_or_buy/i], 'make_buy'),
+      makeBuy: findHeader(partsHeaders, [/make_buy|makebuy|make\/buy|make_or_buy/i], 'makebuy'),
       quantity: findHeader(partsHeaders, [/quantity/i, /qty/i], 'quantity'),
       comments: findHeader(partsHeaders, [/comments/i, /comment/i, /description/i], 'comments'),
-      customId: findHeader(partsHeaders, [/custom_id|custom_part_id|part_no_custom/i], 'custom_id'),
+      customId: findHeader(partsHeaders, [/custom_id|custom_part_id|part_no_custom/i], 'part_no_custom'),
       delete: findHeader(partsHeaders, [/^delete$/i, /deleted/i], 'delete'),
     },
     subparts: {
       uid: findHeader(subpartsHeaders, [/subpart_uid/i], 'subpart_uid'),
       partUid: findHeader(subpartsHeaders, [/part_uid/i], 'part_uid'),
       partNo: findHeader(subpartsHeaders, [/part_no/i, /part_number/i], 'part_no'),
-      name: findHeader(subpartsHeaders, [/^subpart$/i, /^part$/i, /subpart_name/i, /part_name/i, /^name$/i, /^subtype$/i, /^type$/i], 'part'),
-      makeBuy: findHeader(subpartsHeaders, [/make_buy|makebuy|make\/buy|make_or_buy/i], 'make_buy'),
+      name: findHeader(subpartsHeaders, [/^subpart$/i, /^part$/i, /subpart_name/i, /part_name/i, /^name$/i, /^subtype$/i, /^type$/i], 'subtype'),
+      makeBuy: findHeader(subpartsHeaders, [/make_buy|makebuy|make\/buy|make_or_buy/i], 'makebuy'),
       quantity: findHeader(subpartsHeaders, [/quantity/i, /qty/i], 'quantity'),
       comments: findHeader(subpartsHeaders, [/comments/i, /comment/i, /description/i], 'comments'),
       delete: findHeader(subpartsHeaders, [/^delete$/i, /deleted/i], 'delete'),
@@ -202,16 +202,58 @@ export function exportEntriesToCSV(
   assemblies: AssemblyRow[],
   mapping: ColumnMapping,
   partsHeaders: string[],
-  subpartsHeaders: string[]
-): { parts: any[]; subparts: any[] } {
+  subpartsHeaders: string[],
+  assembliesHeaders: string[] = ['assembly_uid', 'system', 'assembly', 'sub_assembly', 'assembly_no', 'comments']
+): { parts: any[]; subparts: any[]; assemblies: any[] } {
   const parts: any[] = [];
   const subparts: any[] = [];
 
-  // Lookup map for assembly UIDs: (system + assemblyName) -> assembly_uid
+  // 1. Detect all unique (system, assembly) pairs from entries
+  const uniqueAssembliesMap = new Map<string, { system: string; assembly: string }>();
+  entries.forEach((e) => {
+    if (e.system && e.assembly) {
+      const key = `${e.system}:${e.assembly}`.toLowerCase();
+      if (!uniqueAssembliesMap.has(key)) {
+        uniqueAssembliesMap.set(key, { system: e.system, assembly: e.assembly });
+      }
+    }
+  });
+
+  // 2. Build the final assemblies list and resolve UIDs
+  const exportedAssemblies: any[] = [];
   const assemblyUidLookup = new Map<string, string>();
-  assemblies.forEach((a) => {
-    const key = `${String(a[mapping.assemblies.system])}:${String(a[mapping.assemblies.name])}`.toLowerCase();
-    assemblyUidLookup.set(key, String(a[mapping.assemblies.uid]));
+  let tempAssemblyIdCounter = 1;
+
+  uniqueAssembliesMap.forEach((val, key) => {
+    // Check if it exists in the imported assemblies list
+    const existing = assemblies.find((a) => {
+      const sysVal = a[mapping.assemblies.system];
+      const nameVal = a[mapping.assemblies.name];
+      return sysVal && nameVal && `${sysVal}:${nameVal}`.toLowerCase() === key;
+    });
+
+    if (existing) {
+      exportedAssemblies.push(existing);
+      assemblyUidLookup.set(key, String(existing[mapping.assemblies.uid]));
+    } else {
+      // Generate temporary assembly_uid
+      const tempUid = `NEW-A${tempAssemblyIdCounter++}`;
+      const newAssembly: Record<string, any> = {};
+      
+      // Populate fields according to assembliesHeaders
+      assembliesHeaders.forEach((h) => {
+        newAssembly[h] = '';
+      });
+      newAssembly[mapping.assemblies.uid] = tempUid;
+      newAssembly[mapping.assemblies.system] = val.system;
+      newAssembly[mapping.assemblies.name] = val.assembly;
+      newAssembly['sub_assembly'] = 'none';
+      newAssembly['assembly_no'] = '';
+      newAssembly['comments'] = 'Auto-generated assembly container';
+
+      exportedAssemblies.push(newAssembly);
+      assemblyUidLookup.set(key, tempUid);
+    }
   });
 
   // Track parent Parts created for sub-assemblies
@@ -345,5 +387,5 @@ export function exportEntriesToCSV(
     subparts.push(subRecord);
   });
 
-  return { parts, subparts };
+  return { parts, subparts, assemblies: exportedAssemblies };
 }
